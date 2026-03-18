@@ -63,4 +63,4 @@ python -m unittest discover tests
 ## 📄 Documentation (เจาะลึก)
 หากต้องการศึกษาการทำงานเชิงลึกของแต่ละไฟล์ (File Structure Architecture) สามารถอ่านเพิ่มเติมได้ที่ไฟล์ `about.md` ซึ่งอธิบายหน้าที่การรับส่งหน้าบ้าน-หลังบ้านไว้เป็นหมวดหมู่ครับ 🎸🔥
 
-*Built for Guitarists. Powered by Agentic Clean Code.*
+
