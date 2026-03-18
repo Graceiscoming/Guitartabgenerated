@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Guitar Tab Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #121212; color: #eee; }
+        .container { max-width: 800px; margin: auto; }
+        input[type="text"], input[type="number"], select { padding: 10px; background: #333; color: white; border: 1px solid #555; width: 100%; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; margin-top: 10px; }
+        .row > div { flex: 1; }
+        button { padding: 10px 20px; background: #FF5722; color: white; border: none; cursor: pointer; margin-top: 15px; border-radius: 4px; }
+        button:hover { background: #E64A19; }
+        pre.json-box { background: #222; padding: 15px; border-radius: 5px; overflow-x: auto; color: #4CAF50; max-height: 200px; }
+        pre.tab-box { background: #1a1a1a; padding: 25px; border-radius: 5px; overflow-x: auto; color: #fff; font-size: 1.2em; border: 1px solid #444; line-height: 1.2; font-family: monospace; }
+        .editor-btn { background: #444; border: 1px solid #666; padding: 5px 10px; border-radius: 3px; cursor: pointer; color: white; }
+        .editor-btn:hover { background: #007bff; border-color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Smart Guitar Tab Generator 🎸</h1>
+            <button onclick="newProject()" style="background:#555; margin-top:0;">➕ New Project</button>
+        </div>
+        
+        <div class="row" style="margin-bottom: 20px;">
+            <div>
+                <label>Song Title:</label>
+                <input type="text" id="songTitle" placeholder="My Awesome Riff" value="Untitled">
+            </div>
+        </div>
+
+        <p>คุณสามารถใส่ชื่อโน้ต เช่น <b>C</b>, <b>D</b>, <b>E</b> และสามารถใส่ <b>^</b> ต่อท้ายเพื่อให้โน้ตสูงขึ้น (เช่น <b>C^</b>) หรือ <b>%</b> เพื่อให้เสียงต่ำลง (เช่น <b>C%</b>) เทียบกับโน้ตก่อนหน้าได้!</p>
+        
+        <label>Notes (comma separated):</label>
+        <input type="text" id="notes" value="C, D, E, C^, G%, E%, C">
+        
+        <div class="row">
+            <div>
+                <label>Min Fret:</label>
+                <input type="number" id="minFret" value="0">
+            </div>
+            <div>
+                <label>Max Fret:</label>
+                <input type="number" id="maxFret" value="5">
+            </div>
+        </div>
+        <div class="row">
+            <div>
+                <label>Start String (1-6, blank for auto):</label>
+                <input type="number" id="startString" placeholder="e.g. 5" min="1" max="6">
+            </div>
+            <div>
+                <label>Start Fret (blank for auto):</label>
+                <input type="number" id="startFret" placeholder="e.g. 3">
+            </div>
+            <div>
+                <label>Mode:</label>
+                <select id="mode">
+                    <option value="all">Full Guitar (1-6)</option>
+                    <option value="midi">Midi (Strings 1-4)</option>
+                </select>
+            </div>
+        </div>
+        
+        <button onclick="generateTab()">Generate Tab</button>
+        
+        <h2>Visual Tab:</h2>
+        <button onclick="downloadTabTxt()" style="background: #4CAF50; margin: 0 0 10px 0;">📥 Download .txt</button>
+        <pre class="tab-box" id="visual-tab">Press Generate!</pre>
+
+        <h2>Interactive Edit Mode:</h2>
+        <p style="font-size: 0.9em; color: #aaa;">(Click on a note below to manually change its string and fret. The rest of the tab will recalculate automatically!)</p>
+        <div id="editor-container" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+             <!-- Buttons will be populated here -->
+        </div>
+
+        <h2>AI Learning Dashboard:</h2>
+        <p style="font-size: 0.9em; color: #aaa;">Check if the engine remembers your manual modifications across calculations.</p>
+        <button onclick="fetchLearningStats()" style="background: #9C27B0; margin: 0 0 10px 0;">📊 Check AI Memory</button>
+        <pre class="json-box" id="learning-output">Press button to load AI stats...</pre>
+
+        <h2>Raw JSON Data:</h2>
+        <pre class="json-box" id="output">No data calculated yet.</pre>
+    </div>
+
+    <script>
+        let globalTabState = [];
+        let globalNoteNames = [];
+
+        function newProject() {
+            if (globalTabState.length > 0) {
+                if (!confirm("Start an empty project? Any unsaved tab changes will be cleared.")) return;
+            }
+            document.getElementById('songTitle').value = "Untitled";
+            document.getElementById('notes').value = "";
+            document.getElementById('minFret').value = "0";
+            document.getElementById('maxFret').value = "5";
+            document.getElementById('startString').value = "";
+            document.getElementById('startFret').value = "";
+            document.getElementById('mode').value = "all";
+            
+            globalTabState = [];
+            globalNoteNames = [];
+            
+            document.getElementById('visual-tab').innerText = "Press Generate!";
+            document.getElementById('editor-container').innerHTML = "";
+            document.getElementById('output').innerText = "No data calculated yet.";
+        }
+
+        function downloadTabTxt() {
+            if (!globalTabState || globalTabState.length === 0) {
+                alert("Please generate a tab first before downloading!");
+                return;
+            }
+            
+            const tabText = document.getElementById('visual-tab').innerText;
+            const songTitle = document.getElementById('songTitle').value || "Untitled";
+            const filename = songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_tab.txt";
+            
+            const header = `Guitar Tab: ${songTitle}\nGenerated by Smart Adaptive Backend\n\n`;
+            
+            let jsonString = "Sequence Details:\n";
+            globalTabState.forEach((pos, i) => {
+                const nName = globalNoteNames[i] || '?';
+                jsonString += `${nName} -> String ${pos.string}, Fret ${pos.fret}\n`;
+            });
+            
+            const fullText = header + tabText + "\n\n" + jsonString;
+            const blob = new Blob([fullText], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        async function fetchLearningStats() {
+            try {
+                const response = await fetch('/api/learning/stats?profile_id=default');
+                const data = await response.json();
+                
+                let out = `Total Manual Overrides Learned: ${data.total_edits}\n\n`;
+                
+                out += "Favorite Target Positions (Weight Bonus):\n";
+                if (Object.keys(data.favorites).length === 0) {
+                    out += "- No preferences learned yet -\n";
+                }
+                for (const [pos, stats] of Object.entries(data.favorites)) {
+                    out += `- ${pos} : Chosen ${stats.count} times (Bonus -${stats.bonus.toFixed(1)} distance)\n`;
+                }
+                
+                out += "\nRaw Edit History:\n";
+                if (data.history.length === 0) {
+                     out += "[]";
+                } else {
+                    data.history.forEach(h => {
+                        out += `* Overrode S${h.old_string}F${h.old_fret} -> S${h.new_string}F${h.new_fret} (MIDI: ${h.midi_value})\n`;
+                    });
+                }
+                
+                document.getElementById('learning-output').innerText = out;
+            } catch (err) {
+                document.getElementById('learning-output').innerText = "Error fetching stats: " + err;
+            }
+        }
+
+        async function generateTab() {
+            const notesInput = document.getElementById('notes').value;
+            const minFret = parseInt(document.getElementById('minFret').value) || 0;
+            const maxFret = parseInt(document.getElementById('maxFret').value) || 24;
+            const mode = document.getElementById('mode').value;
+            const allowedStrings = mode === 'midi' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6];
+            const startString = parseInt(document.getElementById('startString').value);
+            const startFret = parseInt(document.getElementById('startFret').value);
+            const notes = notesInput.split(',').map(n => n.trim());
+            
+            const payload = { 
+                notes: notes, 
+                min_fret: minFret, 
+                max_fret: maxFret,
+                allowed_strings: allowedStrings 
+            };
+            if (!isNaN(startString) && !isNaN(startFret)) {
+                payload.start_string = startString;
+                payload.start_fret = startFret;
+            }
+            
+            try {
+                const response = await fetch('/api/tab/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.tab_path) {
+                    globalTabState = data.tab_path;
+                    globalNoteNames = notes;
+                    renderVisualAndEditor(data);
+                } else {
+                    document.getElementById('visual-tab').innerText = "error generating path.";
+                }
+                
+            } catch (err) {
+                document.getElementById('output').innerText = "Error: " + err;
+            }
+        }
+
+        function renderVisualAndEditor(data) {
+            document.getElementById('output').innerText = JSON.stringify(globalTabState, null, 4);
+            document.getElementById('visual-tab').innerText = drawASCII(globalTabState);
+            
+            const editorDiv = document.getElementById('editor-container');
+            editorDiv.innerHTML = '';
+            
+            globalTabState.forEach((pos, idx) => {
+                const noteName = globalNoteNames[idx] || '?';
+                const btn = document.createElement('button');
+                btn.className = 'editor-btn';
+                btn.innerText = `[${idx}] ${noteName} (S${pos.string}, F${pos.fret})`;
+                btn.onclick = () => showEditPrompt(idx, pos, noteName);
+                editorDiv.appendChild(btn);
+            });
+        }
+
+        async function showEditPrompt(idx, oldPos, noteName) {
+            const newFret = prompt(`Editing Note [${idx}] = ${noteName}\nCurrent Fret is ${oldPos.fret}.\nEnter new Fret:`, oldPos.fret);
+            if (newFret === null) return;
+            const newString = prompt(`Enter new String (1-6) for Fret ${newFret}:`, oldPos.string);
+            if (newString === null) return;
+
+            const minFret = parseInt(document.getElementById('minFret').value) || 0;
+            const maxFret = parseInt(document.getElementById('maxFret').value) || 24;
+            const mode = document.getElementById('mode').value;
+            const allowedStrings = mode === 'midi' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6];
+
+            const newPos = {
+                string: parseInt(newString),
+                fret: parseInt(newFret),
+                midi_value: oldPos.midi_value // Keep the pitch constant if possible
+            };
+
+            const payload = {
+                note_names: globalNoteNames,
+                tab_state: globalTabState,
+                edited_index: idx,
+                new_position: newPos,
+                min_fret: minFret,
+                max_fret: maxFret,
+                allowed_strings: allowedStrings
+            };
+
+            try {
+                const response = await fetch('/api/tab/override', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.tab_path) {
+                    globalTabState = data.tab_path;
+                    renderVisualAndEditor(data);
+                }
+            } catch (err) {
+                alert("Error during override: " + err);
+            }
+        }
+
+        function drawASCII(tabData) {
+            if (!tabData || tabData.length === 0) return "No path generated.";
+            
+            const strings = {
+                1: "e|---",
+                2: "B|---",
+                3: "G|---",
+                4: "D|---",
+                5: "A|---",
+                6: "E|---"
+            };
+
+            tabData.forEach(pos => {
+                let fretStr = pos.fret.toString();
+                let fretDisplay = fretStr + "-"; 
+                if (fretStr.length === 1) fretDisplay += "-";
+                
+                for(let i=1; i<=6; i++) {
+                    if (i === pos.string) {
+                        strings[i] += "-" + fretStr + "-";
+                    } else {
+                        strings[i] += "-".repeat(fretStr.length + 2);
+                    }
+                }
+            });
+            
+            let out = [];
+            for(let i=1; i<=6; i++) {
+                out.push(strings[i] + "---|");
+            }
+            return out.join("\n");
+        }
+    </script>
+</body>
+</html>
