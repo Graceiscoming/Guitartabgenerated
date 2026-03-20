@@ -39,6 +39,17 @@ def read_root():
             return f.read()
     return "<h1>UI is missing</h1><p>Please ensure static/index.html exists</p>"
 
+@app.get("/manual", response_class=HTMLResponse)
+def read_manual_page():
+    """
+    Page for Manual Position Additions
+    """
+    html_path = os.path.join(os.path.dirname(__file__), "static", "manual.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read()
+    return "<h1>Manual.html is missing</h1>"
+
 @app.post("/api/tab/generate")
 def api_generate_tab(req: TabGenerateRequest):
     """ Phase 2 API """

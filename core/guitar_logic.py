@@ -125,6 +125,22 @@ def _parse_note_str(note_str: str) -> tuple[str, Optional[str]]:
 
 def _get_valid_positions(base_note: str, direction: Optional[str], prev_pos: Optional[dict], min_fret: int, max_fret: int, allowed_strings: Optional[list[int]]) -> list[dict]:
     """ Retrieves strictly valid positions matching the Fret Box, String rules, and Direction (+/-) """
+    
+    # Check for direct coordinate format e.g., S3F10
+    match = re.match(r"^S(\d+)F(\d+)$", base_note.strip())
+    if match:
+        string = int(match.group(1))
+        fret = int(match.group(2))
+        tuning = get_guitar_fretboard()
+        # string 1-6 -> index 5 to 0
+        string_idx = 6 - string 
+        midi_val = tuning[string_idx] + fret
+        return [{
+            "string": string,
+            "fret": fret,
+            "midi_value": midi_val
+        }]
+        
     midi_val = note_to_midi(base_note)
     all_pos = find_all_positions(midi_val)
     valid_pos = filter_by_box_constraint(all_pos, min_fret, max_fret, allowed_strings)
