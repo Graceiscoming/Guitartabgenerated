@@ -9,6 +9,7 @@ class NotePosition(BaseModel):
     string: int
     fret: int
     midi_value: int
+    modifier: Optional[str] = None
 
 class UserProfile(BaseModel):
     profile_id: str

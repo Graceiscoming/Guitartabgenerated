@@ -178,7 +178,20 @@
             const allowedStrings = mode === 'midi' ? [1, 2, 3, 4] : [1, 2, 3, 4, 5, 6];
             const startString = parseInt(document.getElementById('startString').value);
             const startFret = parseInt(document.getElementById('startFret').value);
-            const notes = notesInput.split(',').map(n => n.trim());
+            
+            let inputList = notesInput.split(',').map(n => n.trim());
+            let notes = [];
+            inputList.forEach(n => {
+                if (n.includes('/')) {
+                    let parts = n.split('/');
+                    notes.push(parts[0].trim());
+                    for(let i=1; i<parts.length; i++) {
+                        notes.push('/' + parts[i].trim());
+                    }
+                } else {
+                    notes.push(n);
+                }
+            });
             
             const payload = { 
                 notes: notes, 
@@ -244,7 +257,8 @@
             const newPos = {
                 string: parseInt(newString),
                 fret: parseInt(newFret),
-                midi_value: oldPos.midi_value // Keep the pitch constant if possible
+                midi_value: oldPos.midi_value, // Keep the pitch constant if possible
+                modifier: oldPos.modifier
             };
 
             const payload = {
@@ -285,16 +299,34 @@
                 6: "E|---"
             };
 
-            tabData.forEach(pos => {
+            tabData.forEach((pos, idx) => {
                 let fretStr = pos.fret.toString();
-                let fretDisplay = fretStr + "-"; 
-                if (fretStr.length === 1) fretDisplay += "-";
+                let isSlideNext = (idx + 1 < tabData.length && tabData[idx + 1].modifier === '/');
                 
-                for(let i=1; i<=6; i++) {
+                for (let i = 1; i <= 6; i++) {
                     if (i === pos.string) {
-                        strings[i] += "-" + fretStr + "-";
+                        if (pos.modifier === '/') {
+                            strings[i] += "/" + fretStr;
+                        } else {
+                            strings[i] += "-" + fretStr;
+                        }
+                        
+                        // Add trailing dash ONLY if the NEXT note is NOT a slide on the same string
+                        if (!isSlideNext) {
+                            strings[i] += "-";
+                        }
                     } else {
-                        strings[i] += "-".repeat(fretStr.length + 2);
+                        // Match width of addition
+                        let addedWidth = fretStr.length + 1; // 1 for the '-' or '/' prefix
+                        if (pos.modifier === '/') {
+                            strings[i] += "-".repeat(addedWidth);
+                        } else {
+                            strings[i] += "-".repeat(addedWidth);
+                        }
+                        
+                        if (!isSlideNext) {
+                            strings[i] += "-";
+                        }
                     }
                 }
             });

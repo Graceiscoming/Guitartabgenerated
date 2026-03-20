@@ -176,12 +176,14 @@ def generate_tab_path(note_names: list[str], min_fret: int = 0, max_fret: int = 
     
     # 1. จัดการโน้ตเปิดจุดเริ่มต้น
     if start_pos and start_pos.get('fret') is not None:
-        current_pos = start_pos
+        current_pos = start_pos.copy() if hasattr(start_pos, 'copy') else dict(start_pos)
         if 'midi_value' not in current_pos:
             tuning = get_guitar_fretboard()
             string_idx = 6 - current_pos['string']
             open_midi = tuning[string_idx]
             current_pos['midi_value'] = open_midi + current_pos['fret']
+        if note_names[0].startswith('/'):
+            current_pos['modifier'] = '/'
         logger.debug(f"[Engine] Using forced start position: {current_pos}")
         path.append(current_pos)
     else:
@@ -199,10 +201,25 @@ def generate_tab_path(note_names: list[str], min_fret: int = 0, max_fret: int = 
     # 2. ค้นหาเส้นทางโน้ตตัวถัดๆ ไป (Engine Core Loop)
     start_idx = 1 if not start_pos else 1 
     for i in range(start_idx, len(note_names)):
-        base_note, direction = _parse_note_str(note_names[i])
-        logger.debug(f"[Engine] Solving Note [{i}]: {note_names[i]} (Base: {base_note}, Dir: {direction})")
+        note_str = note_names[i]
+        is_slide = False
+        if note_str.startswith('/'):
+            is_slide = True
+            note_str = note_str[1:]
+            
+        base_note, direction = _parse_note_str(note_str)
+        logger.debug(f"[Engine] Solving Note [{i}]: {note_names[i]} (Base: {base_note}, Dir: {direction}, Slide: {is_slide})")
         
-        valid_next_pos = _get_valid_positions(base_note, direction, current_pos, min_fret, max_fret, allowed_strings)
+        current_allowed_strings = allowed_strings
+        if is_slide and current_pos:
+            current_allowed_strings = [current_pos['string']]
+            
+        valid_next_pos = _get_valid_positions(base_note, direction, current_pos, min_fret, max_fret, current_allowed_strings)
+        
+        if not valid_next_pos and is_slide and current_pos:
+            logger.debug(f"[Engine] '{base_note}' missing on same string in bounds. Relaxing Fret Box for Slide.")
+            valid_next_pos = _get_valid_positions(base_note, direction, current_pos, 0, 24, current_allowed_strings)
+            
         if not valid_next_pos:
             logger.warning(f"[Engine] No valid positions left for {base_note}. Aborting subsequent path logic.")
             break
@@ -217,6 +234,10 @@ def generate_tab_path(note_names: list[str], min_fret: int = 0, max_fret: int = 
                 min_distance = dist
                 best_pos = pos
                 
+        best_pos = best_pos.copy()
+        if is_slide:
+            best_pos['modifier'] = '/'
+            
         logger.debug(f"[Engine] Selected optimal step -> {best_pos} (Cost: {min_distance:.2f})")
         path.append(best_pos)
         current_pos = best_pos
