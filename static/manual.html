@@ -1,28 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manual Position Builder</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #121212; color: #eee; }
-        .container { max-width: 800px; margin: auto; }
-        input[type="number"] { padding: 10px; background: #333; color: white; border: 1px solid #555; width: 100%; box-sizing: border-box; }
-        .row { display: flex; gap: 10px; margin-top: 10px; }
-        .row > div { flex: 1; }
-        button { padding: 10px 20px; background: #4CAF50; color: white; border: none; cursor: pointer; margin-top: 15px; border-radius: 4px; }
-        button:hover { background: #45a049; }
-        pre.tab-box { background: #1a1a1a; padding: 25px; border-radius: 5px; overflow-x: auto; color: #fff; font-size: 1.2em; border: 1px solid #444; line-height: 1.2; font-family: monospace; }
-        .coord-item { background: #222; padding: 10px; border: 1px solid #444; border-radius: 5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .danger-btn { background: #f44336; padding: 5px 10px; margin-top: 0; }
-        .danger-btn:hover { background: #da190b; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #121212;
+            color: #eee;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        input[type="number"], input[type="text"] {
+            padding: 12px 15px;
+            background: #1a1a1a;
+            color: white;
+            border: 1px solid #444;
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #2196F3;
+            background: #222;
+            box-shadow: 0 0 8px rgba(33, 150, 243, 0.3);
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .row>div {
+            flex: 1;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        pre.tab-box {
+            background: #1a1a1a;
+            padding: 25px;
+            border-radius: 5px;
+            overflow-x: auto;
+            color: #fff;
+            font-size: 1.2em;
+            border: 1px solid #444;
+            line-height: 1.2;
+            font-family: monospace;
+        }
+
+        .coord-item {
+            background: #222;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .danger-btn {
+            background: #f44336;
+            padding: 5px 10px;
+            margin-top: 0;
+        }
+
+        .danger-btn:hover {
+            background: #da190b;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h1>Manual Position Builder 🛠</h1>
-            <button onclick="location.href='/'" style="background:#2196F3; margin-top:0;">⬅ Back to Standard</button>
+            <div>
+                <button onclick="newProject()" style="background:#555; margin-top:0; margin-right: 10px;">➕ New Project</button>
+                <button onclick="location.href='/'" style="background:#2196F3; margin-top:0;">⬅ Back to Standard</button>
+            </div>
+        </div>
+
+        <div class="row" style="margin-bottom: 20px;">
+            <div>
+                <label>Song Title:</label>
+                <input type="text" id="songTitle" placeholder="My Awesome Riff" value="Untitled">
+            </div>
         </div>
 
         <p>คุณสามารถระบุ **สาย (1-6)** และ **เฟรต (0-24)** โดยตรงเพื่อสร้างแบบเรียงลำดับตำแหน่งที่ต้องการได้!</p>
@@ -42,7 +130,8 @@
                 <input type="checkbox" id="isSlide" style="width: 20px; height: 20px; cursor: pointer;">
             </div>
             <div>
-                <label for="isSlide" style="cursor: pointer; font-size: 1em;"> 🔗 เป็นลูกสไลด์ (Slide จากโน้ตก่อนหน้ามาที่นี่)</label>
+                <label for="isSlide" style="cursor: pointer; font-size: 1em;"> 🔗 เป็นลูกสไลด์ (Slide
+                    จากโน้ตก่อนหน้ามาที่นี่)</label>
             </div>
         </div>
         <button onclick="addPosition()">➕ Add Position</button>
@@ -53,9 +142,11 @@
             <!-- Render items here -->
         </div>
 
-        <button onclick="generateTab()" style="background: #FF5722; width: 100%; font-weight: bold; font-size: 1.1em;">Generate Visual Tab</button>
+        <button onclick="generateTab()"
+            style="background: #FF5722; width: 100%; font-weight: bold; font-size: 1.1em;">Generate Visual Tab</button>
 
         <h2>Visual Tab:</h2>
+        <button onclick="downloadTabTxt()" style="background: #4CAF50; margin: 0 0 10px 0;">📥 Download .txt</button>
         <pre class="tab-box" id="visual-tab">No items added yet...</pre>
     </div>
 
@@ -68,7 +159,7 @@
             45, // String 5 (A)
             40  // String 6 (E)
         ];
-                const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         let manualSequence = [];
 
         function getNoteName(string, fret) {
@@ -87,10 +178,10 @@
             if (isNaN(string) || string < 1 || string > 6) { alert("Invalid string 1-6"); return; }
             if (isNaN(fret) || fret < 0 || fret > 24) { alert("Invalid fret 0-24"); return; }
 
-            manualSequence.push({ 
-                string: string, 
+            manualSequence.push({
+                string: string,
                 fret: fret,
-                modifier: isSlide ? '/' : null 
+                modifier: isSlide ? '/' : null
             });
             renderList();
             // Reset slide checkbox after adding
@@ -117,7 +208,7 @@
                 const item = document.createElement('div');
                 item.className = 'coord-item';
                 item.innerHTML = `
-                    <span><b>[#${idx+1}]</b> String: ${pos.string} | Fret: ${pos.fret} | <b>Note: ${noteName}</b>${slideText}</span>
+                    <span><b>[#${idx + 1}]</b> String: ${pos.string} | Fret: ${pos.fret} | <b>Note: ${noteName}</b>${slideText}</span>
                     <button class="danger-btn" onclick="removePosition(${idx})">Delete</button>
                 `;
                 listDiv.appendChild(item);
@@ -155,13 +246,13 @@
                     document.getElementById('visual-tab').innerText = "Error generating path.";
                 }
             } catch (err) {
-                 document.getElementById('visual-tab').innerText = "Error: " + err;
+                document.getElementById('visual-tab').innerText = "Error: " + err;
             }
         }
 
         function drawASCII(tabData) {
             if (!tabData || tabData.length === 0) return "No path generated.";
-            
+
             const strings = {
                 1: "e|---", 2: "B|---", 3: "G|---", 4: "D|---", 5: "A|---", 6: "E|---"
             };
@@ -169,7 +260,7 @@
             tabData.forEach((pos, idx) => {
                 let fretStr = pos.fret.toString();
                 let isSlideNext = (idx + 1 < tabData.length && tabData[idx + 1].modifier === '/');
-                
+
                 for (let i = 1; i <= 6; i++) {
                     if (i === pos.string) {
                         if (pos.modifier === '/') {
@@ -192,6 +283,57 @@
             }
             return out.join("\n");
         }
+
+        function downloadTabTxt() {
+            if (!manualSequence || manualSequence.length === 0) {
+                alert("Please add positions and generate a tab first!");
+                return;
+            }
+
+            const tabText = document.getElementById('visual-tab').innerText;
+            if (tabText.startsWith("No") || tabText.startsWith("Error")) {
+                alert("No completed tab to download!");
+                return;
+            }
+
+            const songTitle = document.getElementById('songTitle').value || "Untitled";
+            const filename = songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_manual_tab.txt";
+            let header = `Manual Position Guitar Tab: ${songTitle}\nGenerated by Smart Adaptive Backend\n\n`;
+
+            let details = "Sequence Details:\n";
+            manualSequence.forEach((pos, i) => {
+                const noteName = getNoteName(pos.string, pos.fret);
+                const slide = pos.modifier === '/' ? ' (Slide)' : '';
+                details += `[#${i + 1}] String ${pos.string}, Fret ${pos.fret} -> Note: ${noteName}${slide}\n`;
+            });
+
+            const fullText = header + tabText + "\n\n" + details;
+            
+            const blob = new Blob([fullText], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        }
+
+        function newProject() {
+            if (manualSequence.length > 0) {
+                if (!confirm("Start an empty project? Any unsaved tab changes will be cleared.")) return;
+            }
+            document.getElementById('songTitle').value = "Untitled";
+            document.getElementById('manualString').value = "1";
+            document.getElementById('manualFret').value = "0";
+            document.getElementById('isSlide').checked = false;
+            
+            manualSequence = [];
+            renderList();
+            document.getElementById('visual-tab').innerText = "No items added yet...";
+        }
     </script>
 </body>
+
 </html>
