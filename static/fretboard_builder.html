@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Fretboard Builder (V2) - Premium</title>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --container-bg: #1a1a1a;
+            --accent-color: #FF5722;
+            --fret-wire: #888;
+            --string-color: #ffffff;
+
+            --note-bg: #333;
+            --note-hover: #FF5722;
+            --text-color: #eee;
+        }
+
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+        }
+
+        .btn-secondary {
+            background: #444;
+        }
+
+        .btn-secondary:hover {
+            background: #555;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Fretboard Styles */
+        .fretboard-outer {
+            overflow-x: auto;
+            padding-bottom: 20px;
+            margin: 20px 0;
+        }
+
+        .fretboard {
+            display: flex;
+            flex-direction: column;
+            background: #2a2a2a;
+            border-radius: 4px;
+            position: relative;
+            min-width: 1500px;
+            border-left: 10px solid #111; /* Nut */
+        }
+
+        .string-row {
+            height: 40px;
+            display: flex;
+            position: relative;
+            align-items: center;
+        }
+
+        /* String Lines */
+        .string-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: var(--string-color);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Vary thickness for lower strings */
+        .string-row[data-string="6"] .string-line { height: 4px; }
+        .string-row[data-string="5"] .string-line { height: 3.5px; }
+        .string-row[data-string="4"] .string-line { height: 3px; }
+
+        .fret-cell {
+            flex: 1;
+            height: 100%;
+            border-right: 2px solid var(--fret-wire);
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .fret-cell:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Note Marker (Circle) */
+        .note-marker {
+            width: 28px;
+            height: 28px;
+            background: var(--note-bg);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            color: #ccc;
+            opacity: 0.3;
+            transition: all 0.2s ease;
+            border: 1px solid #555;
+        }
+
+        .fret-cell:hover .note-marker {
+            opacity: 1;
+            background: var(--accent-color);
+            color: white;
+            border-color: white;
+            transform: scale(1.1);
+        }
+
+        /* Selected Note Marker (Visual Persistence) */
+        .note-marker.selected {
+            opacity: 1;
+            background: #4CAF50;
+            color: white;
+            border-color: white;
+            transform: scale(1.1);
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .note-marker.selected.last {
+            background: var(--accent-color); /* Highlight the most recently added note */
+        }
+
+        /* Fret numbering at the bottom */
+        .fret-numbers {
+            display: flex;
+            margin-top: 5px;
+            min-width: 1500px;
+            padding-left: 10px;
+        }
+
+        .fret-num {
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        /* Markers Dots */
+        .fret-cell[data-marker="true"]::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #444;
+            border-radius: 50%;
+            top: -26px; /* Positions it between strings 3 and 4 roughly */
+            left: calc(50% - 6px);
+            z-index: 0;
+        }
+
+        /* Sequence List */
+        .sequence-container {
+            margin-top: 30px;
+        }
+
+        .coord-item {
+            background: #252525;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .danger-btn {
+            background: #f44336;
+            padding: 6px 12px;
+        }
+        .danger-btn:hover { background: #d32f2f; }
+
+        pre.tab-box {
+            background: #111;
+            padding: 30px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: #00ff41; /* Matrix green for contrast */
+            font-size: 1.1em;
+            font-family: 'Fira Code', Consolas, monospace;
+            border: 1px solid #333;
+            line-height: 1.4;
+        }
+
+        .row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .row > div { flex: 1; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header-row">
+            <h1>พรีเมียม Visual Builder (V2) 🎸</h1>
+            <div>
+                <button onclick="newProject()" class="btn-secondary">➕ New Project</button>
+                <button onclick="location.href='/'" class="btn-secondary" style="margin-left: 8px;">⬅ Back to Home</button>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>ชื่อเพลง (Song Title):</label>
+                <input type="text" id="songTitle" value="Untitled Riff">
+            </div>
+        </div>
+
+        <p style="color: #aaa;">💡 คลิกที่คอกีตาร์ด้านล่างเพื่อเพิ่มโน้ตลงในแทปทันที (ประหยัดเวลามาก!)</p>
+
+        <div class="row" style="align-items: center; margin-bottom: 5px;">
+            <div style="flex: 0 0 auto;">
+                <input type="checkbox" id="isSlide" style="width: 20px; height: 20px; cursor: pointer;">
+            </div>
+            <div>
+                <label for="isSlide" style="cursor: pointer; font-size: 1.1em; color: white;"> 🔗 เปิดโหมดลูกสไลด์ (คลิกที่คอกีตาร์เพื่อทำ Slide จากโน้ตก่อนหน้านี้)</label>
+            </div>
+        </div>
+
+        <div class="fretboard-outer">
+            <div class="fretboard" id="fretboard">
+                <!-- Strings will be generated by JS -->
+            </div>
+            <div class="fret-numbers" id="fret-numbers">
+                <!-- Numbers will be generated by JS -->
+            </div>
+        </div>
+
+        <div class="sequence-container">
+            <h3>รายการโน้ต (Sequence):</h3>
+            <div id="position-list" style="max-height: 250px; overflow-y: auto;">
+                <p style="color:#555; text-align:center; padding: 20px;">ยังไม่มีโน้ต เลือกที่คอกีตาร์ได้เลย</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button onclick="generateTab()" style="width: 100%; font-size: 1.25em;">สร้างแทป (Generate Visual Tab)</button>
+        </div>
+
+        <h3>ผลลัพธ์ (Visual Tab):</h3>
+        <button onclick="downloadTabTxt()" style="background: #4CAF50; margin-bottom: 15px;">📥 Download .txt</button>
+        <pre class="tab-box" id="visual-tab">รอกดปุ่ม Generate...</pre>
+    </div>
+
+    <script>
+        const TUNING_OPEN_MIDI = [64, 59, 55, 50, 45, 40]; // E, B, G, D, A, E
+        const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        let manualSequence = [];
+
+        function getNoteName(stringIdx, fret) {
+            const openMidi = TUNING_OPEN_MIDI[stringIdx];
+            const midi = openMidi + fret;
+            const noteIndex = midi % 12;
+            const octave = Math.floor(midi / 12) - 1;
+            return NOTE_NAMES[noteIndex] + octave;
+        }
+
+        // Initialize Fretboard
+        const fb = document.getElementById('fretboard');
+        const fn = document.getElementById('fret-numbers');
+        const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+
+        for (let sIdx = 0; sIdx < 6; sIdx++) {
+            const sNum = sIdx + 1;
+            const row = document.createElement('div');
+            row.className = 'string-row';
+            row.dataset.string = sNum;
+            
+            const line = document.createElement('div');
+            line.className = 'string-line';
+            row.appendChild(line);
+
+            for (let f = 0; f <= 24; f++) {
+                const cell = document.createElement('div');
+                cell.className = 'fret-cell';
+                cell.onclick = () => addPosition(sNum, f);
+                
+                // Add marker dots
+                if (MARKER_FRETS.includes(f)) {
+                    if (f === 12 || f === 24) {
+                        if (sNum === 2 || sNum === 4) cell.dataset.marker = "true"; // Double dot
+                    } else {
+                        if (sNum === 4) cell.dataset.marker = "true"; // Single dot on D string
+                    }
+                }
+
+                const note = getNoteName(sIdx, f);
+                const marker = document.createElement('div');
+                marker.className = 'note-marker';
+                marker.dataset.note = note;
+                marker.innerText = note;
+                cell.appendChild(marker);
+
+                row.appendChild(cell);
+            }
+            fb.appendChild(row);
+        }
+
+        // Fret Numbers
+        for (let f = 0; f <= 24; f++) {
+            const num = document.createElement('div');
+            num.className = 'fret-num';
+            num.innerText = f === 0 ? 'Open' : f;
+            fn.appendChild(num);
+        }
+
+        function addPosition(string, fret) {
+            const isSlide = document.getElementById('isSlide').checked;
+            
+            if (isSlide && manualSequence.length === 0) {
+                alert("โน้ตตัวแรกไม่สามารถใช้ลูกสไลด์ได้ครับ!");
+                document.getElementById('isSlide').checked = false;
+                return;
+            }
+
+            manualSequence.push({
+                string: string,
+                fret: fret,
+                modifier: isSlide ? '/' : null
+            });
+            renderList();
+            document.getElementById('isSlide').checked = false; // รีเซ็ตโหมดสไลด์
+        }
+
+        function removePosition(index) {
+            manualSequence.splice(index, 1);
+            renderList();
+        }
+
+        function renderList() {
+            const listDiv = document.getElementById('position-list');
+            listDiv.innerHTML = '';
+
+            // 1. Clear existing fretboard highlights
+            document.querySelectorAll('.note-marker').forEach(marker => {
+                marker.classList.remove('selected', 'last');
+                marker.innerText = marker.dataset.note; // Reset to original note name
+                marker.style.fontSize = "10px"; // Reset font size
+            });
+
+            if (manualSequence.length === 0) {
+                listDiv.innerHTML = '<p style="color:#555; text-align:center; padding: 20px;">ยังไม่มีโน้ต เลือกที่คอกีตาร์ได้เลย</p>';
+                return;
+            }
+
+            manualSequence.forEach((pos, idx) => {
+                const noteName = getNoteName(pos.string - 1, pos.fret);
+                const slideText = pos.modifier === '/' ? ' <span style="color:#FF9800;">(Slide)</span>' : '';
+                const item = document.createElement('div');
+                item.className = 'coord-item';
+                item.innerHTML = `
+                    <span><b>โน้ต #${idx + 1}:</b> สาย ${pos.string} เฟรต ${pos.fret} (<span style="color:var(--accent-color)">${noteName}</span>)${slideText}</span>
+                    <button class="danger-btn" onclick="removePosition(${idx})">ลบออก</button>
+                `;
+                listDiv.appendChild(item);
+
+                // 2. Highlight on fretboard (Visual Persistence)
+                const row = document.querySelector(`.string-row[data-string="${pos.string}"]`);
+                if (row) {
+                    const cell = row.querySelectorAll('.fret-cell')[pos.fret];
+                    if (cell) {
+                        const marker = cell.querySelector('.note-marker');
+                        marker.classList.add('selected');
+                        if (idx === manualSequence.length - 1) {
+                            marker.classList.add('last');
+                        }
+                        marker.innerText = idx + 1; // Show sequence number
+                        marker.style.fontSize = "14px";
+                    }
+                }
+            });
+            // Auto scroll to bottom
+            const container = document.getElementById('position-list');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function generateTab() {
+            if (manualSequence.length === 0) { alert("กรุณาเลือกโน้ตก่อนครับ!"); return; }
+
+            const notesPayload = manualSequence.map(p => {
+                let code = `S${p.string}F${p.fret}`;
+                return p.modifier === '/' ? `/${code}` : code;
+            });
+            const payload = {
+                notes: notesPayload,
+                min_fret: 0,
+                max_fret: 24,
+                allowed_strings: [1, 2, 3, 4, 5, 6]
+            };
+
+            try {
+                const response = await fetch('/api/tab/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.tab_path) {
+                    document.getElementById('visual-tab').innerText = drawASCII(data.tab_path);
+                }
+            } catch (err) {
+                document.getElementById('visual-tab').innerText = "เกิดข้อผิดพลาด: " + err;
+            }
+        }
+
+        function drawASCII(tabData) {
+            if (!tabData || tabData.length === 0) return "No path generated.";
+
+            const strings = {
+                1: "e|---", 2: "B|---", 3: "G|---", 4: "D|---", 5: "A|---", 6: "E|---"
+            };
+
+            tabData.forEach((pos, idx) => {
+                let fretStr = pos.fret.toString();
+                let isSlideNext = (idx + 1 < tabData.length && tabData[idx + 1].modifier === '/');
+
+                for (let i = 1; i <= 6; i++) {
+                    if (i === pos.string) {
+                        if (pos.modifier === '/') {
+                            strings[i] += "/" + fretStr;
+                        } else {
+                            strings[i] += "-" + fretStr;
+                        }
+                        if (!isSlideNext) strings[i] += "-";
+                    } else {
+                        let addedWidth = fretStr.length + 1;
+                        strings[i] += "-".repeat(addedWidth);
+                        if (!isSlideNext) strings[i] += "-";
+                    }
+                }
+            });
+
+            let out = [];
+            for (let i = 1; i <= 6; i++) {
+                out.push(strings[i] + "---|");
+            }
+            return out.join("\n");
+        }
+
+        function downloadTabTxt() {
+            if (manualSequence.length === 0) return alert("ไม่มีข้อมูลให้โหลดครับ");
+            const tabText = document.getElementById('visual-tab').innerText;
+            const songTitle = document.getElementById('songTitle').value || "Untitled";
+            const filename = songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_tab_v2.txt";
+            let details = `Guitar Tab: ${songTitle}\nGenerated by Premium Visual Builder V2\n\n${tabText}\n\nDetails:\n`;
+            manualSequence.forEach((pos, i) => {
+                const noteName = getNoteName(pos.string - 1, pos.fret);
+                details += `[${i + 1}] String ${pos.string}, Fret ${pos.fret} (${noteName})\n`;
+            });
+            const blob = new Blob([details], { type: "text/plain" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function newProject() {
+            if (manualSequence.length > 0 && confirm("เริ่มเพลงใหม่? ข้อมูลเดิมจะหายไปนะ")) {
+                manualSequence = [];
+                document.getElementById('isSlide').checked = false;
+                renderList();
+                document.getElementById('visual-tab').innerText = "รอกดปุ่ม Generate...";
+            }
+        }
+    </script>
+</body>
+
+</html>
