@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Guitar Tab Generator</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <meta name="theme-color" content="#FF5722">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -92,12 +95,15 @@
 
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <h1>Smart Guitar Tab Generator 🎸</h1>
-            <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+            <h1 style="margin: 0;">Smart Guitar Tab Generator 🎸</h1>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="location.href='/v2'"
+                    style="background: linear-gradient(135deg, #FF5722 0%, #D84315 100%); color:white; margin:0; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">🎸 Visual Builder</button>
                 <button onclick="location.href='/manual'"
-                    style="background:#2196F3; margin-top:0; margin-right: 10px;">🛠 Manual Builder</button>
-                <button onclick="newProject()" style="background:#555; margin-top:0;">➕ New Project</button>
+                    style="background: linear-gradient(135deg, #2196F3 0%, #1565C0 100%); color:white; margin:0; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">🛠 Manual Builder</button>
+                <button onclick="newProject()" 
+                    style="background: linear-gradient(135deg, #555 0%, #333 100%); color:white; margin:0; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">➕ New Project</button>
             </div>
         </div>
 
@@ -417,6 +423,13 @@
                 out.push(strings[i] + "---|");
             }
             return out.join("\n");
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+            });
         }
     </script>
 </body>
