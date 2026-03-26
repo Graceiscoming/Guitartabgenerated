@@ -1,7 +1,8 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import os
 
 from core.models import TabGenerateRequest, ManualOverrideRequest, RecalculateRequest
@@ -27,6 +28,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Route for PWA Service Worker and Manifest at root for proper scoping
+@app.get("/service-worker.js")
+async def get_sw():
+    return FileResponse("static/service-worker.js")
+
+@app.get("/manifest.json")
+async def get_manifest():
+    return FileResponse("static/manifest.json")
+
+@app.get("/icon.svg")
+async def get_icon():
+    return FileResponse("static/icon.svg")
+
+# Mount static directory for other assets (CSS, JS, etc.)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():

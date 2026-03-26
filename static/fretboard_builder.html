@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visual Fretboard Builder (V2) - Premium</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    <meta name="theme-color" content="#FF5722">
     <style>
         :root {
             --bg-color: #0f0f0f;
@@ -519,6 +522,13 @@
                 renderList();
                 document.getElementById('visual-tab').innerText = "รอกดปุ่ม Generate...";
             }
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+            });
         }
     </script>
 </body>
