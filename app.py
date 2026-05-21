@@ -1,24 +1,39 @@
+"""
+Smart Adaptive Guitar Tab Generator — entry point
+เปิดใช้งานหลักที่ /v2 (Visual Builder)
+"""
 import logging
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-import os
 
-from core.models import TabGenerateRequest, ManualOverrideRequest, RecalculateRequest
 from core.guitar_logic import generate_tab_path
-from core.learning import save_edit_history, DB_EDIT_HISTORY
+from core.learning import DB_EDIT_HISTORY, save_edit_history
+from core.models import ManualOverrideRequest, RecalculateRequest, TabGenerateRequest
 
+ROOT = Path(__file__).resolve().parent
+STATIC = ROOT / "static"
+
+HTML_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+}
+
+_log_name = os.getenv("LOG_LEVEL", "WARNING").upper()
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    level=getattr(logging, _log_name, logging.WARNING),
+    format="%(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("API_MAIN")
+logger = logging.getLogger("app")
 
 app = FastAPI(
-    title="Smart Adaptive Guitar Tab Generator",
-    description="Backend API for generating and adapting guitar tabs dynamically.",
-    version="1.0.0"
+    title="Guitar Tab Generator",
+    description="Visual fretboard tab builder with pathfinding API",
+    version="2.1.0",
 )
 
 app.add_middleware(
@@ -29,117 +44,89 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Route for PWA Service Worker and Manifest at root for proper scoping
+
+def _html_page(filename: str) -> HTMLResponse:
+    path = STATIC / filename
+    if path.exists():
+        return HTMLResponse(path.read_text(encoding="utf-8"), headers=HTML_NO_CACHE)
+    return HTMLResponse(f"<h1>Missing: {filename}</h1>", headers=HTML_NO_CACHE)
+
+
 @app.get("/service-worker.js")
 async def get_sw():
-    return FileResponse("static/service-worker.js")
+    return FileResponse(STATIC / "service-worker.js")
+
 
 @app.get("/manifest.json")
 async def get_manifest():
-    return FileResponse("static/manifest.json")
+    return FileResponse(STATIC / "manifest.json")
+
 
 @app.get("/icon.svg")
 async def get_icon():
-    return FileResponse("static/icon.svg")
+    return FileResponse(STATIC / "icon.svg")
 
-# Mount static directory for other assets (CSS, JS, etc.)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
+
 
 @app.get("/", response_class=HTMLResponse)
-def read_root():
-    """
-    Step 3.1: สร้าง Frontend UI พื้นฐานแสดงผมแทป
-    """
-    html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>UI is missing</h1><p>Please ensure static/index.html exists</p>"
+def root():
+    return _html_page("index.html")
+
 
 @app.get("/manual", response_class=HTMLResponse)
 def read_manual_page():
-    """
-    Page for Manual Position Additions
-    """
-    html_path = os.path.join(os.path.dirname(__file__), "static", "manual.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>Manual.html is missing</h1>"
+    return _html_page("manual.html")
+
 
 @app.get("/v2", response_class=HTMLResponse)
 def read_v2_page():
-    """
-    Page for Visual Fretboard Builder (V2)
-    """
-    html_path = os.path.join(os.path.dirname(__file__), "static", "fretboard_builder.html")
-    if os.path.exists(html_path):
-        with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>fretboard_builder.html is missing</h1>"
+    return _html_page("fretboard_builder.html")
+
 
 @app.post("/api/tab/generate")
 def api_generate_tab(req: TabGenerateRequest):
-    """ Phase 2 API """
-    logger.info(f"--- Generate Tab Request ---")
-    logger.debug(f"Notes: {req.notes} | FretBox: {req.min_fret}-{req.max_fret} | Strings: {req.allowed_strings}")
     start_pos = None
     if req.start_fret is not None and req.start_string is not None:
         start_pos = {"string": req.start_string, "fret": req.start_fret}
-        logger.debug(f"Explicit Start Pos: {start_pos}")
-        
     path = generate_tab_path(
-        req.notes, 
-        req.min_fret, 
-        req.max_fret, 
+        req.notes,
+        req.min_fret,
+        req.max_fret,
         start_pos=start_pos,
-        allowed_strings=req.allowed_strings
+        allowed_strings=req.allowed_strings,
     )
-    logger.info(f"Generate tab completed: {len(path)} positions returned.")
     return {"tab_path": path}
+
 
 @app.post("/api/tab/override")
 def api_manual_override(req: ManualOverrideRequest):
-    """ Phase 3.2 & 4: รับข้อมูลตอนผู้ใช้แก้โน้ต บันทึกประวัติ และคำนวณ path ใหม่จากจุดนั้น """
-    logger.info(f"--- Manual Override Request ---")
-    logger.debug(f"Edited Index: {req.edited_index} | Profile: {req.profile_id}")
-    old_pos = req.tab_state[req.edited_index].dict()
-    new_pos = req.new_position.dict()
-    logger.debug(f"Old Position: {old_pos} -> New Position: {new_pos}")
-    
-    # 1. บันทึกเป็น Learning History
+    old_pos = req.tab_state[req.edited_index].model_dump()
+    new_pos = req.new_position.model_dump()
     save_edit_history(old_pos, new_pos, req.profile_id)
-    
-    # 2. อัปเดตตำแหน่ง
-    updated_state = [p.dict() for p in req.tab_state]
+
+    updated_state = [p.model_dump() for p in req.tab_state]
     updated_state[req.edited_index] = new_pos
-    
-    # 3. Recalculate ส่วนที่เหลือ
+
     if req.edited_index + 1 < len(req.note_names):
-        logger.debug(f"Recalculating tail starting from index {req.edited_index + 1}")
-        dummy_remaining = ["DUMMY"] + req.note_names[req.edited_index + 1:]
+        dummy_remaining = ["DUMMY"] + req.note_names[req.edited_index + 1 :]
         new_tail = generate_tab_path(
-            dummy_remaining, 
-            req.min_fret, 
-            req.max_fret, 
-            start_pos=new_pos, 
+            dummy_remaining,
+            req.min_fret,
+            req.max_fret,
+            start_pos=new_pos,
             profile_id=req.profile_id,
-            allowed_strings=req.allowed_strings
+            allowed_strings=req.allowed_strings,
         )
-        updated_state = updated_state[:req.edited_index] + new_tail
-        
-    logger.info(f"Manual Override completed. Returning updated path.")
+        updated_state = updated_state[: req.edited_index] + new_tail
+
     return {"tab_path": updated_state}
+
 
 @app.get("/api/learning/stats")
 def api_learning_stats(profile_id: str = "default"):
-    """ Return learning history and bonus scoring for dashboard """
-    try:
-        # Pydantic v1 vs v2 dict conversion wrapper
-        history = [h.dict() if hasattr(h, 'dict') else h.model_dump() for h in DB_EDIT_HISTORY if h.profile_id == profile_id]
-    except Exception:
-        history = []
-        
+    history = [h.model_dump() for h in DB_EDIT_HISTORY if h.profile_id == profile_id]
     favorites = {}
     for h in history:
         key = f"String {h['new_string']}, Fret {h['new_fret']}"
@@ -147,29 +134,34 @@ def api_learning_stats(profile_id: str = "default"):
             favorites[key] = {"count": 0, "bonus": 0.0}
         favorites[key]["count"] += 1
         favorites[key]["bonus"] += 0.5
-        
     return {
         "total_edits": len(history),
         "history": history,
-        "favorites": favorites
+        "favorites": favorites,
     }
+
 
 @app.post("/api/tab/recalculate")
 def api_recalculate(req: RecalculateRequest):
-    """
-    Step 3.3: Manual explicitly calling AutoRecalculate
-    """
     remaining_notes = req.note_names[req.start_index:]
     start_pos = req.tab_state[req.start_index].model_dump()
     recalc_path = generate_tab_path(
-        remaining_notes, 
-        req.min_fret, 
-        req.max_fret, 
-        start_pos=start_pos
+        remaining_notes,
+        req.min_fret,
+        req.max_fret,
+        start_pos=start_pos,
     )
     return {"recalc_path": recalc_path}
 
+
 if __name__ == "__main__":
     import uvicorn
-    # run with python app.py
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
+    dev_reload = os.getenv("DEV_RELOAD", "").lower() in ("1", "true", "yes")
+    uvicorn.run(
+        "app:app",
+        host="127.0.0.1",
+        port=int(os.getenv("PORT", "8000")),
+        reload=dev_reload,
+        log_level=_log_name.lower(),
+    )

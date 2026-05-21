@@ -1,7 +1,7 @@
 {
-  "name": "Smart Guitar Tab Generator",
+  "name": "Guitar Tab Generator",
   "short_name": "GuitarTab",
-  "start_url": "/",
+  "start_url": "/v2",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#FF5722",
