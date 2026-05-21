@@ -49,6 +49,10 @@
 
     function migrateStore(store) {
         store.projects.forEach(proj => {
+            if (proj.artist === undefined) proj.artist = '';
+            if (proj.tuning === undefined) proj.tuning = 'E A D G B E';
+            if (proj.capo === undefined) proj.capo = '';
+            if (proj.tempo === undefined) proj.tempo = '';
             if (proj.appSavedAt === undefined) proj.appSavedAt = null;
             if (proj.hasUnsavedChanges === undefined) proj.hasUnsavedChanges = !proj.appSavedAt;
             (proj.sections || []).forEach(sec => {
@@ -92,13 +96,35 @@
 
         bindUI() {
             document.getElementById('btnHubNewProject')?.addEventListener('click', () => this.openModal('modalNewProject'));
+            document.getElementById('btnHubExport')?.addEventListener('click', () => this.exportAllProjects());
+            document.getElementById('btnHubImport')?.addEventListener('click', () => document.getElementById('hubImportFile')?.click());
+            document.getElementById('hubImportFile')?.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (file) this.importProjectsFromFile(file);
+                e.target.value = '';
+            });
             document.getElementById('btnEditorNewSong')?.addEventListener('click', () => this.requestNewProjectFromEditor());
             document.getElementById('btnBackToHub')?.addEventListener('click', () => this.goToHub());
             document.getElementById('btnNewSection')?.addEventListener('click', () => this.openNewSectionFlow());
             document.getElementById('btnDeleteSection')?.addEventListener('click', () => this.deleteCurrentSection());
             document.getElementById('btnSaveWeb')?.addEventListener('click', () => this.saveProjectToWeb());
-            document.getElementById('btnSavePng')?.addEventListener('click', () => this.saveSectionAsPng());
+            document.getElementById('btnSavePng')?.addEventListener('click', () => this.saveSectionAsPng(false));
+            document.getElementById('btnSavePngPrint')?.addEventListener('click', () => this.saveSectionAsPng(true));
+            document.getElementById('btnPrintSection')?.addEventListener('click', () => this.printCurrentSection());
+            document.getElementById('btnExportFullTxt')?.addEventListener('click', () => this.exportFullSongTxt());
+            document.getElementById('btnExportFullPrint')?.addEventListener('click', () => this.exportFullSongPrint());
+            document.getElementById('btnCopySection')?.addEventListener('click', () => this.copyCurrentSection());
+            document.getElementById('btnUndo')?.addEventListener('click', () => window.undoSequence?.());
+            document.getElementById('btnRedo')?.addEventListener('click', () => window.redoSequence?.());
             document.getElementById('btnClearSection')?.addEventListener('click', () => this.clearCurrentSection());
+
+            ['songArtist', 'songTuning', 'songCapo', 'songTempo'].forEach(id => {
+                document.getElementById(id)?.addEventListener('change', () => this.onMetaChange());
+                document.getElementById(id)?.addEventListener('blur', () => this.onMetaChange());
+            });
+            document.getElementById('autoTabEnabled')?.addEventListener('change', (e) => {
+                window.__autoTabEnabled = e.target.checked;
+            });
 
             const songTitle = document.getElementById('songTitle');
             const sectionName = document.getElementById('sectionName');
@@ -111,6 +137,14 @@
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
                     if (this.isEditorOpen()) this.saveProjectToWeb();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && this.isEditorOpen()) {
+                    e.preventDefault();
+                    window.undoSequence?.();
+                }
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey)) && this.isEditorOpen()) {
+                    e.preventDefault();
+                    window.redoSequence?.();
                 }
             });
 
@@ -170,6 +204,7 @@
 
             const songTitle = document.getElementById('songTitle');
             if (songTitle) songTitle.value = proj.title;
+            this.syncMetaFields(proj);
 
             this.renderSectionTabs();
             this.loadSectionIntoEditor(this.store.activeSectionId);
@@ -260,6 +295,39 @@
                 };
                 list.appendChild(card);
             });
+        },
+
+        exportAllProjects() {
+            const payload = JSON.stringify(this.store, null, 2);
+            const blob = new Blob([payload], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `guitar-tab-backup-${date}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.showToast('ดาวน์โหลดไฟล์สำรองแล้ว');
+        },
+
+        async importProjectsFromFile(file) {
+            try {
+                const data = JSON.parse(await file.text());
+                if (!Array.isArray(data.projects)) {
+                    alert('ไฟล์ไม่ถูกต้อง — ต้องเป็น backup จากแอปนี้');
+                    return;
+                }
+                const n = data.projects.length;
+                if (!confirm(`นำเข้า ${n} โปรเจกต์ — แทนที่รายการเดิมทั้งหมด?`)) return;
+                this.store = migrateStore(data);
+                this.store.activeProjectId = null;
+                this.store.activeSectionId = null;
+                saveStore(this.store);
+                this.showHub();
+                this.showToast(`นำเข้า ${n} โปรเจกต์แล้ว`);
+            } catch (err) {
+                alert('อ่านไฟล์ไม่ได้: ' + err.message);
+            }
         },
 
         deleteProject(projectId) {
@@ -418,6 +486,30 @@
             this.showToast(`บันทึกโปรเจกต์ "${proj.title}" ในเว็บแล้ว`);
         },
 
+        syncMetaFields(proj) {
+            const map = {
+                songArtist: 'artist',
+                songTuning: 'tuning',
+                songCapo: 'capo',
+                songTempo: 'tempo',
+            };
+            Object.entries(map).forEach(([elId, key]) => {
+                const el = document.getElementById(elId);
+                if (el) el.value = proj[key] ?? '';
+            });
+        },
+
+        onMetaChange() {
+            const proj = this.getProject();
+            if (!proj) return;
+            proj.artist = document.getElementById('songArtist')?.value.trim() || '';
+            proj.tuning = document.getElementById('songTuning')?.value.trim() || 'E A D G B E';
+            proj.capo = document.getElementById('songCapo')?.value.trim() || '';
+            proj.tempo = document.getElementById('songTempo')?.value.trim() || '';
+            this.markDirty();
+            saveStore(this.store);
+        },
+
         onSongTitleChange() {
             const proj = this.getProject();
             if (!proj) return;
@@ -472,6 +564,8 @@
             window.__v2ActiveSectionId = sectionId;
             this.store.activeSectionId = sectionId;
             window.manualSequence = JSON.parse(JSON.stringify(sec.sequence || []));
+            window.__undoStack = [];
+            window.__redoStack = [];
 
             const sectionName = document.getElementById('sectionName');
             if (sectionName) sectionName.value = sec.name;
@@ -505,6 +599,10 @@
             const project = {
                 id: projId,
                 title,
+                artist: '',
+                tuning: 'E A D G B E',
+                capo: '',
+                tempo: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 appSavedAt: null,
@@ -590,8 +688,162 @@
             this.showToast('ลบแทปแล้ว');
         },
 
+        copyCurrentSection() {
+            const proj = this.getProject();
+            const sec = this.getSection();
+            if (!proj || !sec) return;
+            this.persistCurrentSection();
+
+            const secId = uid('sec');
+            const maxOrder = proj.sections.reduce((m, s) => Math.max(m, s.order), -1);
+            const copyName = `${sec.name} (copy)`;
+            proj.sections.push({
+                id: secId,
+                name: copyName,
+                order: maxOrder + 1,
+                status: 'draft',
+                sequence: JSON.parse(JSON.stringify(sec.sequence || [])),
+                tabAscii: sec.tabAscii,
+                appSavedAt: null,
+                pngExportedAt: null,
+                hasUnsavedChanges: true,
+            });
+            this.markDirty();
+            saveStore(this.store);
+            this.loadSectionIntoEditor(secId);
+            this.showToast(`คัดลอกแทป "${sec.name}" → "${copyName}"`);
+        },
+
+        collectAllSectionTabs(proj) {
+            this.persistCurrentSection();
+            sortSections(proj);
+            const TF = window.TabFormat;
+            return proj.sections.map((sec) => {
+                let tabText = sec.tabAscii;
+                const empty = !tabText || tabText === 'รอกดปุ่ม Generate...' || tabText.startsWith('เกิดข้อผิดพลาด');
+                if (empty && TF && (sec.sequence || []).length) {
+                    tabText = TF.drawTabFromSequence(sec.sequence);
+                    sec.tabAscii = tabText;
+                }
+                return { section: sec, tabText: tabText || '(ว่าง)' };
+            });
+        },
+
+        exportFullSongTxt() {
+            const proj = this.getProject();
+            if (!proj) return;
+            const blocks = this.collectAllSectionTabs(proj);
+            if (!blocks.some((b) => (b.section.sequence || []).length)) {
+                alert('ยังไม่มีโน้ตในโปรเจกต์');
+                return;
+            }
+            const doc = window.TabFormat.buildFullSongDocument(proj, blocks);
+            const name = sanitizeFilename(proj.title) + '_full_tab.txt';
+            window.TabFormat.downloadText(name, doc);
+            this.markDirty();
+            saveStore(this.store);
+            this.showToast('ดาวน์โหลดแทปทั้งเพลงแล้ว');
+        },
+
+        buildExportCardHtml(proj, sec, tabText, printMode) {
+            const dateStr = new Date().toLocaleString('th-TH');
+            const noteCount = (sec.sequence || []).length;
+            const meta = window.TabFormat.defaultMeta(proj);
+            const bg = printMode ? '#ffffff' : '#1a1a1a';
+            const titleColor = printMode ? '#b33a00' : '#FF5722';
+            const textColor = printMode ? '#222' : '#fff';
+            const subColor = printMode ? '#444' : '#ccc';
+            const preBg = printMode ? '#fafafa' : '#0d0d0d';
+            const preColor = printMode ? '#111' : '#fff';
+            const border = printMode ? '#ccc' : '#333';
+            let metaLine = `Tuning: ${this.escapeHtml(meta.tuning)}`;
+            if (meta.artist) metaLine += ` · ${this.escapeHtml(meta.artist)}`;
+            if (meta.capo) metaLine += ` · Capo ${this.escapeHtml(meta.capo)}`;
+            if (meta.tempo) metaLine += ` · ${this.escapeHtml(meta.tempo)}`;
+            return `
+                <div style="font-family:'Segoe UI',Arial,sans-serif;padding:28px 32px;background:${bg};color:${textColor};min-width:520px;">
+                    <div style="font-size:22px;font-weight:600;color:${titleColor};">${this.escapeHtml(meta.title)}</div>
+                    <div style="font-size:12px;color:${subColor};margin:6px 0 12px;">${metaLine}</div>
+                    <div style="font-size:16px;color:${subColor};margin:0 0 16px;">[ ${this.escapeHtml(sec.name)} ]</div>
+                    <pre style="margin:0;padding:20px;background:${preBg};border-radius:8px;font-family:Consolas,'Courier New',monospace;font-size:15px;line-height:1.4;color:${preColor};white-space:pre;border:1px solid ${border};">${this.escapeHtml(tabText)}</pre>
+                    <div style="margin-top:16px;font-size:12px;color:${subColor};">${noteCount} โน้ต · ${dateStr}</div>
+                </div>`;
+        },
+
+        buildFullSongCardHtml(proj, blocks, printMode) {
+            const meta = window.TabFormat.defaultMeta(proj);
+            const bg = printMode ? '#ffffff' : '#1a1a1a';
+            const titleColor = printMode ? '#b33a00' : '#FF5722';
+            const textColor = printMode ? '#222' : '#fff';
+            const subColor = printMode ? '#444' : '#ccc';
+            const preBg = printMode ? '#fafafa' : '#0d0d0d';
+            const preColor = printMode ? '#111' : '#fff';
+            const border = printMode ? '#ccc' : '#333';
+            let metaLine = `Tuning: ${this.escapeHtml(meta.tuning)}`;
+            if (meta.artist) metaLine += ` · Artist: ${this.escapeHtml(meta.artist)}`;
+            if (meta.capo) metaLine += ` · Capo ${this.escapeHtml(meta.capo)}`;
+            if (meta.tempo) metaLine += ` · ${this.escapeHtml(meta.tempo)}`;
+            const sectionsHtml = blocks
+                .map(
+                    (b) => `
+                <div style="margin-top:20px;">
+                    <div style="font-size:15px;font-weight:600;color:${subColor};margin-bottom:8px;">[ ${this.escapeHtml(b.section.name)} ]</div>
+                    <pre style="margin:0;padding:16px;background:${preBg};font-family:Consolas,monospace;font-size:14px;line-height:1.4;color:${preColor};white-space:pre;border:1px solid ${border};">${this.escapeHtml(b.tabText)}</pre>
+                </div>`
+                )
+                .join('');
+            return `
+                <div style="font-family:'Segoe UI',Arial,sans-serif;padding:28px 32px;background:${bg};color:${textColor};min-width:560px;">
+                    <div style="font-size:24px;font-weight:600;color:${titleColor};">${this.escapeHtml(meta.title)}</div>
+                    <div style="font-size:13px;color:${subColor};margin:8px 0 4px;">${metaLine}</div>
+                    ${sectionsHtml}
+                </div>`;
+        },
+
+        openPrintDocument(html, title) {
+            const w = window.open('', '_blank');
+            if (!w) {
+                alert('เบราว์เซอร์บล็อก popup — อนุญาต popup แล้วลองใหม่');
+                return;
+            }
+            w.document.write(
+                `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${this.escapeHtml(title)}</title>
+                <style>body{margin:0;padding:24px;background:#fff;color:#111;font-family:Consolas,monospace;}
+                @media print{body{padding:12px;}}</style></head><body>${html}</body></html>`
+            );
+            w.document.close();
+            setTimeout(() => {
+                w.focus();
+                w.print();
+            }, 400);
+        },
+
+        async exportCardToPng(cardEl, filename, bgColor) {
+            if (typeof html2canvas !== 'function') {
+                alert('โหลด html2canvas ไม่ได้ — ต้องมีเน็ต');
+                return;
+            }
+            const canvas = await html2canvas(cardEl, {
+                backgroundColor: bgColor,
+                scale: 2,
+                logging: false,
+            });
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    if (!blob) return resolve(false);
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    resolve(true);
+                }, 'image/png');
+            });
+        },
+
         clearCurrentSection() {
             if (!confirm('ล้างโน้ตและแทปของแทปนี้?')) return;
+            if (typeof window.pushUndoSnapshot === 'function') window.pushUndoSnapshot();
             window.manualSequence = [];
             const sec = this.getSection();
             if (sec) {
@@ -609,30 +861,14 @@
             this.updateSaveStatusUI();
         },
 
-        buildExportFilename(proj, sec) {
+        buildExportFilename(proj, sec, printMode) {
             const order = String((sec.order ?? 0) + 1).padStart(2, '0');
-            return `${sanitizeFilename(proj.title)}_${order}_${sanitizeFilename(sec.name)}.png`;
+            const suffix = printMode ? '_print' : '';
+            return `${sanitizeFilename(proj.title)}_${order}_${sanitizeFilename(sec.name)}${suffix}.png`;
         },
 
-        buildExportCardHtml(proj, sec, tabText) {
-            const dateStr = new Date().toLocaleString('th-TH');
-            const noteCount = (sec.sequence || []).length;
-            return `
-                <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 28px 32px; background: #1a1a1a; color: #fff; min-width: 520px;">
-                    <div style="font-size: 22px; font-weight: 600; color: #FF5722;">${this.escapeHtml(proj.title)}</div>
-                    <div style="font-size: 16px; color: #ccc; margin: 20px 0;">แทป: ${this.escapeHtml(sec.name)}</div>
-                    <pre style="margin:0;padding:20px;background:#0d0d0d;border-radius:8px;font-family:Consolas,monospace;font-size:15px;color:#fff;white-space:pre;border:1px solid #333;">${this.escapeHtml(tabText)}</pre>
-                    <div style="margin-top:16px;font-size:12px;color:#888;">${noteCount} โน้ต · ${dateStr}</div>
-                </div>`;
-        },
-
-        async saveSectionAsPng() {
-            if (!window.manualSequence?.length) {
-                alert('กรุณาเพิ่มโน้ตก่อน');
-                return;
-            }
-            const proj = this.getProject();
-            const sec = this.getSection();
+        async getCurrentSectionTabText() {
+            if (!window.manualSequence?.length) return null;
             const tabEl = document.getElementById('visual-tab');
             let tabText = tabEl?.innerText?.trim() || '';
             if (!tabText || tabText === 'รอกดปุ่ม Generate...') {
@@ -640,7 +876,21 @@
                 tabText = tabEl?.innerText?.trim() || '';
             }
             if (!tabText || tabText === 'รอกดปุ่ม Generate...') {
-                alert('กด Generate ก่อนครับ');
+                tabText = window.TabFormat.drawTabFromSequence(window.manualSequence);
+            }
+            return tabText;
+        },
+
+        async saveSectionAsPng(printMode) {
+            if (!window.manualSequence?.length) {
+                alert('กรุณาเพิ่มโน้ตก่อน');
+                return;
+            }
+            const proj = this.getProject();
+            const sec = this.getSection();
+            const tabText = await this.getCurrentSectionTabText();
+            if (!tabText) {
+                alert('กรุณาเพิ่มโน้ตก่อน');
                 return;
             }
 
@@ -648,35 +898,56 @@
             sec.tabAscii = tabText;
 
             const card = document.getElementById('export-card');
-            card.innerHTML = this.buildExportCardHtml(proj, sec, tabText);
+            card.innerHTML = this.buildExportCardHtml(proj, sec, tabText, printMode);
             card.style.display = 'block';
 
-            if (typeof html2canvas !== 'function') {
-                alert('โหลด html2canvas ไม่ได้ — ต้องมีเน็ต');
-                card.style.display = 'none';
-                return;
-            }
-
             try {
-                const canvas = await html2canvas(card, { backgroundColor: '#1a1a1a', scale: 2, logging: false });
-                canvas.toBlob(blob => {
-                    if (!blob) return;
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = this.buildExportFilename(proj, sec);
-                    link.click();
-                    URL.revokeObjectURL(link.href);
+                const ok = await this.exportCardToPng(
+                    card,
+                    this.buildExportFilename(proj, sec, printMode),
+                    printMode ? '#ffffff' : '#1a1a1a'
+                );
+                if (ok) {
                     sec.pngExportedAt = new Date().toISOString();
                     saveStore(this.store);
                     this.renderSectionTabs();
                     this.updateSaveStatusUI();
-                }, 'image/png');
+                    this.showToast(printMode ? 'PNG พิมพ์ (ขาว) แล้ว' : 'PNG แล้ว');
+                }
             } catch (err) {
                 alert('Export ไม่สำเร็จ: ' + err.message);
             } finally {
                 card.style.display = 'none';
                 card.innerHTML = '';
             }
+        },
+
+        async printCurrentSection() {
+            const proj = this.getProject();
+            const sec = this.getSection();
+            const tabText = await this.getCurrentSectionTabText();
+            if (!proj || !sec || !tabText) {
+                alert('กรุณาเพิ่มโน้ตก่อน');
+                return;
+            }
+            this.persistCurrentSection();
+            sec.tabAscii = tabText;
+            const inner = this.buildExportCardHtml(proj, sec, tabText, true);
+            this.openPrintDocument(inner, `${proj.title} - ${sec.name}`);
+        },
+
+        async exportFullSongPrint() {
+            const proj = this.getProject();
+            if (!proj) return;
+            const blocks = this.collectAllSectionTabs(proj);
+            if (!blocks.some((b) => (b.section.sequence || []).length)) {
+                alert('ยังไม่มีโน้ตในโปรเจกต์');
+                return;
+            }
+            saveStore(this.store);
+            const inner = this.buildFullSongCardHtml(proj, blocks, true);
+            this.openPrintDocument(inner, proj.title);
+            this.showToast('เปิดหน้าพิมพ์ — เลือก Save as PDF ได้');
         },
 
         onSequenceChanged() {

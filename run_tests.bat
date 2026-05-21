@@ -1,20 +1,29 @@
 @echo off
+chcp 65001 >nul
 title Guitar Tab - Unit Tests
 cd /d "%~dp0"
 
 echo.
 echo  ============================================
-echo    รัน Unit Tests ทั้งหมด (tests/test_*.py)
+echo    Guitar Tab - Test Suite (pretty output)
 echo  ============================================
 echo.
 
-python -m unittest discover -s tests -p "test_*.py" -v
+python -c "import pytest" 2>nul
+if errorlevel 1 (
+    echo  ติดตั้ง dependencies สำหรับ test...
+    pip install -r requirements-dev.txt -q
+    echo.
+)
+
+python run_tests.py
 
 echo.
 if %ERRORLEVEL% equ 0 (
-    echo ผ่านทั้งหมด
+    echo  เสร็จสิ้น — ผ่านทั้งหมด
 ) else (
-    echo มี test ล้มเหลว — ดูรายละเอียดด้านบน
+    echo  มี test ล้มเหลว
 )
 echo.
 pause
+exit /b %ERRORLEVEL%

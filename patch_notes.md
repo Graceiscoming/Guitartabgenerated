@@ -12,6 +12,26 @@
 
 ---
 
+## V2.2 — แกะกระดาษ → แทปมาตรฐาน (21/5/2026)
+
+- **[UX] หัวแทป:** ศิลปิน, Tuning, Capo, Tempo
+- **[UX] Export ทั้งเพลง:** `.txt` รวมทุกท่อน · **พิมพ์ / PDF** พื้นขาว
+- **[UX] คัดลอกแทป** · **Undo / Redo** (Ctrl+Z / Ctrl+Y)
+- **[UX] อัปเดตแทปอัตโนมัติ** เมื่อเพิ่มโน้ต (ปิดได้)
+- **[UX] PNG พิมพ์ (ขาว)** ต่อท่อน · จัดคอลัมน์แทปเท่ากันทุกสาย (`tab-format.js`)
+
+---
+
+## V2.1 — Clean & ใช้เองง่าย (21/5/2026)
+
+- **[Clean]** ลบ `main.py`, `main_v2.py`, `index.html`, `manual.html`, สคริปต์ test ที่ root
+- **[UX]** `/` redirect ไป `/v2` — จุดเข้าเดียว · PWA `start_url` = `/v2`
+- **[UX]** Hub: **สำรอง JSON** / **นำเข้า JSON** · คำแนะนำ Ctrl+S
+- **[Clean]** `app.py` สั้นลง · log ปกติ `WARNING` (ตั้ง `LOG_LEVEL=DEBUG` ตอนพัฒนา)
+- **[Test]** `python run_tests.py` — pytest + output สวย
+
+---
+
 ## V2.0 — Visual Builder, โปรเจกต์ & เทคนิคแทป (21/5/2026)
 
 > รุ่นหลักที่รวม Backend เดียว (`app.py`), Visual Builder แบบโปรเจกต์, เทคนิคกีตาร์ครบชุด และการรันเซิร์ฟเวอร์แบบเปิด–ปิดได้
@@ -76,7 +96,8 @@ stop_app.bat              # หยุดตัวค้าง port 8000
 - **`tests/test_guitar_logic.py`** — engine, token, slide, hammer, pull
 - **`tests/test_learning.py`** — ประวัติแก้ไข, weight score
 - **`tests/test_api.py`** — หน้า HTML + REST API
-- รันครั้งเดียว: `python -m unittest discover -s tests -p "test_*.py" -v` หรือ `run_tests.bat`
+- รันครั้งเดียว (output สวย): `python run_tests.py` หรือ `run_tests.bat` (pytest + pytest-sugar)
+- แบบเดิม: `python -m unittest discover -s tests -p "test_*.py" -v`
 
 ---
 

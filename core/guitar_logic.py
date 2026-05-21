@@ -1,6 +1,6 @@
 import re
 import math
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import logging
 from core.learning import calculate_weight_score
 
@@ -215,7 +215,7 @@ def parse_tab_token(note_str: str) -> Optional[dict]:
     tuning = get_guitar_fretboard()
     string_idx = 6 - string
     midi_val = tuning[string_idx] + fret
-    pos = {
+    pos: dict[str, Any] = {
         "string": string,
         "fret": fret,
         "midi_value": midi_val,

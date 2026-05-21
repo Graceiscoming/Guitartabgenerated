@@ -1,4 +1,8 @@
+import logging
+
 from core.models import EditHistory
+
+logger = logging.getLogger("LEARNING")
 
 # Mock Database สำหรับทดสอบ (บันทึกใน Memory)
 DB_EDIT_HISTORY: list[EditHistory] = []
@@ -20,7 +24,7 @@ def save_edit_history(old_pos: dict, new_pos: dict, profile_id: str) -> None:
     )
     DB_EDIT_HISTORY.append(history)
     HISTORY_COUNTER += 1
-    print(f"[DB] Saved user '{profile_id}' preference: {history}")
+    logger.debug("Saved preference profile=%s %s", profile_id, history)
 
 def calculate_weight_score(position: dict, profile_id: str) -> float:
     """

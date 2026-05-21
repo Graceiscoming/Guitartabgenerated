@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#FF5722">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+    <script src="/static/tab-format.js?v=1"></script>
     <style>
         :root {
             --bg-color: #0f0f0f;
@@ -412,7 +413,41 @@
         /* Hub */
         .hub-header { text-align: center; margin-bottom: 32px; }
         .hub-header p { color: #888; margin-top: 8px; }
-        .hub-actions { text-align: center; margin-bottom: 28px; }
+        .hub-actions {
+            text-align: center;
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .hub-tip { text-align: center; color: #777; font-size: 0.85em; margin: 0 0 24px; }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .meta-grid label { font-size: 0.85em; }
+        .toolbar-mini {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin: 12px 0;
+        }
+        .auto-tab-label { color: #aaa; font-size: 0.9em; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .export-song-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 16px 0;
+            padding: 14px;
+            background: #222;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .export-song-bar h4 { margin: 0 0 8px; width: 100%; font-weight: 500; color: #ccc; }
         .btn-hub-create { font-size: 1.15em; padding: 14px 32px; }
         #projectList {
             display: grid;
@@ -504,8 +539,12 @@
                 <p>1 เพลง = 1 โปรเจกต์ · แต่ละโปรเจกต์มีหลายแทป/ท่อน · เพลงใหม่ต้องสร้างโปรเจกต์ใหม่</p>
             </div>
             <div class="hub-actions">
-                <button type="button" id="btnHubNewProject" class="btn-hub-create">➕ สร้างโปรเจกต์ใหม่ (เพลงใหม่)</button>
+                <button type="button" id="btnHubNewProject" class="btn-hub-create">➕ สร้างโปรเจกต์ใหม่</button>
+                <button type="button" id="btnHubExport" class="btn-secondary">📤 สำรอง JSON</button>
+                <button type="button" id="btnHubImport" class="btn-secondary">📥 นำเข้า JSON</button>
+                <input type="file" id="hubImportFile" accept=".json,application/json" hidden>
             </div>
+            <p class="hub-tip">Ctrl+S บันทึกในเบราว์เซอร์ · สำรอง JSON ก่อนล้าง cache / ย้ายเครื่อง</p>
             <div id="hubEmpty">
                 <p style="font-size:1.1em; margin:0 0 8px;">ยังไม่มีโปรเจกต์</p>
                 <p style="margin:0;">กดปุ่มด้านบนเพื่อสร้างเพลงแรกของคุณ</p>
@@ -542,13 +581,45 @@
                     <input type="text" id="songTitle" placeholder="ชื่อเพลง">
                 </div>
             </div>
+            <div class="meta-grid">
+                <div>
+                    <label for="songArtist">ศิลปิน</label>
+                    <input type="text" id="songArtist" placeholder="Artist">
+                </div>
+                <div>
+                    <label for="songTuning">Tuning</label>
+                    <input type="text" id="songTuning" placeholder="E A D G B E" value="E A D G B E">
+                </div>
+                <div>
+                    <label for="songCapo">Capo</label>
+                    <input type="text" id="songCapo" placeholder="ไม่ใช้ / Capo 2">
+                </div>
+                <div>
+                    <label for="songTempo">Tempo</label>
+                    <input type="text" id="songTempo" placeholder="120 BPM">
+                </div>
+            </div>
+
+            <div class="export-song-bar">
+                <h4>📄 Export ทั้งเพลง</h4>
+                <button type="button" id="btnExportFullTxt" class="btn-secondary btn-small">ดาวน์โหลด .txt ทั้งเพลง</button>
+                <button type="button" id="btnExportFullPrint" class="btn-secondary btn-small">🖨 พิมพ์ / PDF ทั้งเพลง (พื้นขาว)</button>
+            </div>
 
             <div class="section-toolbar">
                 <h3 style="margin:0;">แทปในโปรเจกต์นี้:</h3>
                 <p id="sectionCountLabel">0 แทป</p>
                 <div id="sectionTabs" style="flex:1; display:flex; flex-wrap:wrap; gap:8px;"></div>
                 <button type="button" id="btnNewSection" class="btn-secondary btn-small">+ เพิ่มแทป</button>
+                <button type="button" id="btnCopySection" class="btn-secondary btn-small">📋 คัดลอกแทปนี้</button>
                 <button type="button" id="btnDeleteSection" class="btn-danger-outline btn-small">− ลบแทปนี้</button>
+            </div>
+            <div class="toolbar-mini">
+                <button type="button" id="btnUndo" class="btn-secondary btn-small" title="Ctrl+Z">↩ Undo</button>
+                <button type="button" id="btnRedo" class="btn-secondary btn-small" title="Ctrl+Y">↪ Redo</button>
+                <label class="auto-tab-label">
+                    <input type="checkbox" id="autoTabEnabled" checked> อัปเดตแทปอัตโนมัติ
+                </label>
             </div>
 
             <div class="row">
@@ -600,15 +671,17 @@
             </div>
         </div>
 
-        <div style="margin-top: 30px;">
-            <button type="button" onclick="generateTab()" style="width: 100%; font-size: 1.25em;">สร้างแทป (Generate)</button>
+        <div style="margin-top: 20px;">
+            <button type="button" onclick="generateTab()" class="btn-secondary" style="width:100%;">สร้างแทปใหม่ (Generate)</button>
         </div>
 
         <h3>ผลลัพธ์แทป</h3>
-        <p class="save-hint">💾 บันทึกแล้ว · hammer = 5h8 · pull-off = 8p5 · 🖼 = export PNG</p>
+        <p class="save-hint">Ctrl+S บันทึก · แทปอัปเดตอัตโนมัติเมื่อเพิ่มโน้ต · พิมพ์ = พื้นขาว</p>
         <div class="action-row">
-            <button type="button" id="btnSavePng" class="btn-export-png">🖼 Export PNG (ดาวน์โหลดรูป)</button>
-            <button type="button" onclick="downloadTabTxt()" class="btn-secondary">📥 Download .txt</button>
+            <button type="button" id="btnSavePng" class="btn-export-png">🖼 PNG (จอ)</button>
+            <button type="button" id="btnSavePngPrint" class="btn-secondary">🖼 PNG พิมพ์ (ขาว)</button>
+            <button type="button" id="btnPrintSection" class="btn-secondary">🖨 พิมพ์ท่อนนี้</button>
+            <button type="button" onclick="downloadTabTxt()" class="btn-secondary">📥 .txt ท่อนนี้</button>
             <button type="button" id="btnClearSection" class="btn-secondary">🗑 ล้างท่อนนี้</button>
         </div>
         <pre class="tab-box" id="visual-tab">รอกดปุ่ม Generate...</pre>
@@ -726,8 +799,42 @@
             fn.appendChild(num);
         }
 
+        window.__undoStack = [];
+        window.__redoStack = [];
+        window.__autoTabEnabled = true;
+
+        function pushUndoSnapshot() {
+            if (!window.V2Project?.isEditorOpen?.()) return;
+            window.__undoStack.push(JSON.stringify(window.manualSequence || []));
+            if (window.__undoStack.length > 50) window.__undoStack.shift();
+            window.__redoStack = [];
+        }
+
+        window.pushUndoSnapshot = pushUndoSnapshot;
+
+        window.undoSequence = function () {
+            if (!window.__undoStack.length) return;
+            window.__redoStack.push(JSON.stringify(window.manualSequence || []));
+            window.manualSequence = JSON.parse(window.__undoStack.pop());
+            renderList();
+            notifySequenceChange();
+        };
+
+        window.redoSequence = function () {
+            if (!window.__redoStack.length) return;
+            window.__undoStack.push(JSON.stringify(window.manualSequence || []));
+            window.manualSequence = JSON.parse(window.__redoStack.pop());
+            renderList();
+            notifySequenceChange();
+        };
+
         function notifySequenceChange() {
             if (window.V2Project) V2Project.onSequenceChanged();
+            const autoOn = document.getElementById('autoTabEnabled')?.checked !== false;
+            if (autoOn && window.manualSequence?.length) {
+                clearTimeout(window.__autoTabTimer);
+                window.__autoTabTimer = setTimeout(() => generateTab(), 400);
+            }
         }
 
         function updateTechniqueHint() {
@@ -763,12 +870,11 @@
         }
 
         function legatoSegment(pos) {
-            if (pos.legatoToFret == null) return null;
-            const link = pos.legatoType === 'pull' ? 'p' : 'h';
-            return `${pos.fret}${link}${pos.legatoToFret}`;
+            return window.TabFormat?.legatoSegment(pos) ?? null;
         }
 
         function addPosition(string, fret) {
+            pushUndoSnapshot();
             const isSlideRange = document.getElementById('isSlideRange').checked;
             const isSlide = document.getElementById('isSlide').checked;
             const isHammer = document.getElementById('isHammer').checked;
@@ -868,6 +974,7 @@
         }
 
         function removePosition(index) {
+            pushUndoSnapshot();
             window.manualSequence.splice(index, 1);
             renderList();
             notifySequenceChange();
@@ -935,7 +1042,7 @@
                 const code = `S${p.string}F${p.fret}`;
                 return p.modifier === '/' ? `/${code}` : code;
             });
-            const localTab = drawTabFromSequence(window.manualSequence);
+            const localTab = window.TabFormat.drawTabFromSequence(window.manualSequence);
             try {
                 const response = await fetch('/api/tab/generate', {
                     method: 'POST',
@@ -949,7 +1056,7 @@
                 });
                 const data = await response.json();
                 const text = (data.tab_path && data.tab_path.length)
-                    ? drawASCII(data.tab_path)
+                    ? window.TabFormat.drawFromApiPath(data.tab_path)
                     : localTab;
                 document.getElementById('visual-tab').innerText = text;
                 if (window.V2Project) await V2Project.onTabGenerated(text);
@@ -958,56 +1065,7 @@
             }
         }
 
-        function appendToTabStrings(strings, pos, segment) {
-            const pad = segment.length + 2;
-            for (let i = 1; i <= 6; i++) {
-                strings[i] += i === pos.string ? `-${segment}-` : '-'.repeat(pad);
-            }
-        }
-
-        /** วาดแทป + บรรทัด H/P เหนือสาย (แบบในรูปแทป) */
-        function drawTabFromSequence(seq) {
-            if (!seq?.length) return 'No path generated.';
-            const strings = { 1: 'e|---', 2: 'B|---', 3: 'G|---', 4: 'D|---', 5: 'A|---', 6: 'E|---' };
-            seq.forEach((pos, idx) => {
-                const seg = legatoSegment(pos);
-                if (seg) {
-                    appendToTabStrings(strings, pos, seg);
-                    return;
-                }
-                if (pos.slideToFret != null) {
-                    appendToTabStrings(strings, pos, `${pos.fret}/${pos.slideToFret}`);
-                    return;
-                }
-                const fretStr = String(pos.fret);
-                const isSlide = pos.modifier === '/';
-                const slideOnSameStringNext = idx + 1 < seq.length
-                    && seq[idx + 1].modifier === '/'
-                    && seq[idx + 1].string === pos.string;
-                for (let i = 1; i <= 6; i++) {
-                    if (i === pos.string) {
-                        strings[i] += (isSlide ? '/' : '-') + fretStr;
-                        if (!slideOnSameStringNext) strings[i] += '-';
-                    } else {
-                        strings[i] += '-'.repeat(fretStr.length + 1);
-                        if (!slideOnSameStringNext) strings[i] += '-';
-                    }
-                }
-            });
-            return [1, 2, 3, 4, 5, 6].map(i => strings[i] + '---|').join('\n');
-        }
-
-        function drawASCII(tabData) {
-            if (!tabData?.length) return 'No path generated.';
-            return drawTabFromSequence(tabData.map(p => ({
-                string: p.string,
-                fret: p.fret,
-                modifier: p.modifier,
-                slideToFret: p.slideToFret,
-                legatoToFret: p.legatoToFret,
-                legatoType: p.legatoType || (p.modifier === 'pull' ? 'pull' : p.modifier === 'hammer' ? 'hammer' : null)
-            })));
-        }
+        window.drawTabFromSequence = (seq) => window.TabFormat.drawTabFromSequence(seq);
 
         function downloadTabTxt() {
             if (window.manualSequence.length === 0) return alert('ไม่มีข้อมูลให้โหลดครับ');
@@ -1037,7 +1095,7 @@
         window.renderList = renderList;
         window.generateTab = generateTab;
     </script>
-    <script src="/static/v2-project.js?v=7"></script>
+    <script src="/static/v2-project.js?v=8"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', async () => {

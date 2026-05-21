@@ -1,13 +1,13 @@
-const CACHE_NAME = 'guitar-tab-cache-v7';
+const CACHE_NAME = 'guitar-tab-cache-v8';
 
-// Only cache stable assets — NOT HTML pages (/, /v2, /manual)
+// Only cache stable assets — NOT HTML pages
 const urlsToCache = [
   '/manifest.json',
   '/icon.svg'
 ];
 
-const NETWORK_FIRST_PATHS = ['/', '/v2', '/manual'];
-const NETWORK_FIRST_PREFIXES = ['/api/', '/static/v2-project.js'];
+const NETWORK_FIRST_PATHS = ['/v2', '/manual'];
+const NETWORK_FIRST_PREFIXES = ['/api/', '/static/v2-project.js', '/static/tab-format.js'];
 
 function isNetworkFirst(url) {
   const path = new URL(url).pathname;
@@ -37,12 +37,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
+  // Let the browser handle the root redirect natively to avoid service worker redirect bugs!
   const url = event.request.url;
+  const path = new URL(url).pathname;
+  if (path === '/') return;
   if (isNetworkFirst(url)) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          if (response && response.status === 200) return response;
+          if (response && (response.status === 200 || response.type === 'opaqueredirect' || response.status === 302 || response.status === 307 || response.status === 304)) return response;
           return caches.match(event.request);
         })
         .catch(() => caches.match(event.request))

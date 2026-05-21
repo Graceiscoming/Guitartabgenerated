@@ -25,23 +25,26 @@ class TestStaticPages(unittest.TestCase):
     def setUpClass(cls):
         cls.client = TestClient(app)
 
-    def test_home_page(self):
-        r = self.client.get("/")
+    def test_root_serves_index(self):
+        r = self.client.get("/", follow_redirects=False)
         self.assertEqual(r.status_code, 200)
-        self.assertIn("text/html", r.headers.get("content-type", ""))
+        self.assertIn("smart guitar tab", r.text.lower())
+
+    def test_manual_page(self):
+        r = self.client.get("/manual")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("manual position builder", r.text.lower())
 
     def test_v2_page(self):
         r = self.client.get("/v2")
         self.assertEqual(r.status_code, 200)
         self.assertIn("fretboard", r.text.lower())
 
-    def test_manual_page(self):
-        r = self.client.get("/manual")
-        self.assertEqual(r.status_code, 200)
-
     def test_manifest(self):
         r = self.client.get("/manifest.json")
         self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data.get("start_url"), "/v2")
 
     def test_service_worker(self):
         r = self.client.get("/service-worker.js")

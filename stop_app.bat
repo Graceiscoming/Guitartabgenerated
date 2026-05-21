@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title หยุด Guitar Tab Server
 cd /d "%~dp0"
 
