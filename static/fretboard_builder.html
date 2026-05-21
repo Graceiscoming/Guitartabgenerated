@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 
 <head>
     <meta charset="UTF-8">
@@ -8,6 +8,8 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="theme-color" content="#FF5722">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --bg-color: #0f0f0f;
@@ -15,9 +17,7 @@
             --accent-color: #FF5722;
             --fret-wire: #888;
             --string-color: #ffffff;
-
             --note-bg: #333;
-            --note-hover: #FF5722;
             --text-color: #eee;
         }
 
@@ -38,18 +38,18 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        h1 {
-            margin-top: 0;
-            font-weight: 300;
-            letter-spacing: 1px;
-        }
+        h1 { margin-top: 0; font-weight: 300; letter-spacing: 1px; }
 
         .header-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
         }
+
+        .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
         button {
             padding: 12px 24px;
@@ -67,21 +67,77 @@
             box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
         }
 
-        .btn-secondary {
-            background: #444;
+        .btn-secondary { background: #444; }
+        .btn-secondary:hover { background: #555; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); }
+        .btn-green { background: #4CAF50; }
+        .btn-green:hover { background: #43a047; }
+
+        .project-bar {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            padding: 16px;
+            background: #222;
+            border-radius: 8px;
+            border: 1px solid #333;
         }
 
-        .btn-secondary:hover {
-            background: #555;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        .project-bar label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.85em; }
+
+        .project-bar select,
+        .project-bar input[type="text"] {
+            padding: 10px;
+            background: #111;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 4px;
+            min-width: 160px;
         }
 
-        /* Fretboard Styles */
-        .fretboard-outer {
-            overflow-x: auto;
-            padding-bottom: 20px;
-            margin: 20px 0;
+        .section-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
+
+        .section-bar h3 {
+            margin: 0;
+            font-size: 0.95em;
+            color: #888;
+            font-weight: 400;
+        }
+
+        #sectionTabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .section-tab {
+            padding: 8px 16px;
+            background: #333;
+            font-size: 0.9em;
+            border-radius: 20px;
+        }
+
+        .section-tab.active {
+            background: var(--accent-color);
+            box-shadow: 0 2px 10px rgba(255, 87, 34, 0.35);
+        }
+
+        .section-tab:hover { transform: none; }
+
+        .btn-small {
+            padding: 8px 14px;
+            font-size: 0.85em;
+        }
+
+        .fretboard-outer { overflow-x: auto; padding-bottom: 20px; margin: 20px 0; }
 
         .fretboard {
             display: flex;
@@ -91,7 +147,6 @@
             position: relative;
             min-width: 1500px;
             border-left: 10px solid #111;
-            /* Nut */
         }
 
         .string-row {
@@ -101,11 +156,9 @@
             align-items: center;
         }
 
-        /* String Lines */
         .string-line {
             position: absolute;
-            left: 0;
-            right: 0;
+            left: 0; right: 0;
             top: 50%;
             height: 2px;
             background: var(--string-color);
@@ -114,18 +167,9 @@
             pointer-events: none;
         }
 
-        /* Vary thickness for lower strings */
-        .string-row[data-string="6"] .string-line {
-            height: 4px;
-        }
-
-        .string-row[data-string="5"] .string-line {
-            height: 3.5px;
-        }
-
-        .string-row[data-string="4"] .string-line {
-            height: 3px;
-        }
+        .string-row[data-string="6"] .string-line { height: 4px; }
+        .string-row[data-string="5"] .string-line { height: 3.5px; }
+        .string-row[data-string="4"] .string-line { height: 3px; }
 
         .fret-cell {
             flex: 1;
@@ -139,14 +183,10 @@
             align-items: center;
         }
 
-        .fret-cell:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
+        .fret-cell:hover { background: rgba(255, 255, 255, 0.05); }
 
-        /* Note Marker (Circle) */
         .note-marker {
-            width: 28px;
-            height: 28px;
+            width: 28px; height: 28px;
             background: var(--note-bg);
             border-radius: 50%;
             display: flex;
@@ -167,23 +207,18 @@
             transform: scale(1.1);
         }
 
-        /* Selected Note Marker (Visual Persistence) */
         .note-marker.selected {
             opacity: 1;
             background: white;
-            color: white;
+            color: #111;
             border-color: white;
             transform: scale(1.1);
             font-weight: bold;
             font-size: 12px;
         }
 
-        .note-marker.selected.last {
-            background: var(--accent-color);
-            /* Highlight the most recently added note */
-        }
+        .note-marker.selected.last { background: var(--accent-color); color: white; }
 
-        /* Fret numbering at the bottom */
         .fret-numbers {
             display: flex;
             margin-top: 5px;
@@ -196,27 +231,20 @@
             text-align: center;
             font-size: 14px;
             font-weight: bold;
-            color: #ffffff;
         }
 
-        /* Markers Dots */
         .fret-cell[data-marker="true"]::after {
             content: '';
             position: absolute;
-            width: 12px;
-            height: 12px;
+            width: 12px; height: 12px;
             background: #444;
             border-radius: 50%;
             top: -26px;
-            /* Positions it between strings 3 and 4 roughly */
             left: calc(50% - 6px);
             z-index: 0;
         }
 
-        /* Sequence List */
-        .sequence-container {
-            margin-top: 30px;
-        }
+        .sequence-container { margin-top: 30px; }
 
         .coord-item {
             background: #252525;
@@ -229,43 +257,25 @@
             border-left: 4px solid var(--accent-color);
         }
 
-        .danger-btn {
-            background: #f44336;
-            padding: 6px 12px;
-        }
-
-        .danger-btn:hover {
-            background: #d32f2f;
-        }
+        .danger-btn { background: #f44336; padding: 6px 12px; }
+        .danger-btn:hover { background: #d32f2f; transform: none; }
 
         pre.tab-box {
             background: #111;
             padding: 30px;
             border-radius: 8px;
             overflow-x: auto;
-            color: #ffffff !important;
+            color: #fff !important;
             font-size: 1.1em;
-            font-family: 'Fira Code', Consolas, monospace;
+            font-family: Consolas, monospace;
             border: 1px solid #333;
             line-height: 1.4;
         }
 
-        .row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
+        .row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .row > div { flex: 1; }
 
-        .row>div {
-            flex: 1;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #aaa;
-            font-size: 0.9em;
-        }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 0.9em; }
 
         input[type="text"] {
             width: 100%;
@@ -274,6 +284,206 @@
             border: 1px solid #444;
             color: white;
             border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .save-hint {
+            font-size: 0.85em;
+            color: #888;
+            margin: 0 0 12px 0;
+        }
+
+        .save-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: #252525;
+            border: 1px solid #444;
+        }
+
+        #saveStatus {
+            font-size: 0.95em;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        #saveStatus.unsaved { color: #ffb74d; }
+        #saveStatus.saved { color: #81c784; }
+
+        .btn-save-web {
+            background: #2196F3;
+            font-size: 1.05em;
+            padding: 12px 28px;
+            white-space: nowrap;
+        }
+
+        .btn-save-web:hover {
+            background: #1e88e5;
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.45);
+        }
+
+        .btn-export-png {
+            background: #4CAF50;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #2196F3;
+            color: #fff;
+            padding: 14px 22px;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+            max-width: 320px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Modals */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal-box {
+            background: #252525;
+            padding: 28px;
+            border-radius: 12px;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #444;
+        }
+
+        .modal-box h2 { margin-top: 0; font-weight: 400; }
+
+        .preset-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .preset-chip {
+            padding: 6px 12px;
+            background: #444;
+            border-radius: 16px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+
+        .preset-chip:hover { background: #555; transform: none; }
+
+        #export-card {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            z-index: -1;
+        }
+
+        /* Hub */
+        .hub-header { text-align: center; margin-bottom: 32px; }
+        .hub-header p { color: #888; margin-top: 8px; }
+        .hub-actions { text-align: center; margin-bottom: 28px; }
+        .btn-hub-create { font-size: 1.15em; padding: 14px 32px; }
+        #projectList {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .project-card {
+            background: #252525;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 18px;
+            transition: border-color 0.2s;
+        }
+        .project-card:hover { border-color: var(--accent-color); }
+        .project-card-title { font-size: 1.15em; font-weight: 600; margin-bottom: 8px; }
+        .project-card-meta { color: #aaa; font-size: 0.9em; }
+        .project-card-date { color: #666; font-size: 0.8em; margin: 8px 0 14px; }
+        .project-card-actions { display: flex; gap: 8px; }
+        .btn-open-project { flex: 1; padding: 8px 12px; font-size: 0.9em; }
+        #hubEmpty {
+            text-align: center;
+            padding: 48px 20px;
+            color: #666;
+            border: 2px dashed #444;
+            border-radius: 12px;
+        }
+
+        /* Editor — สถานะโปรเจกต์ */
+        .current-project-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px 20px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #2a1f1a 0%, #1f2520 100%);
+            border: 1px solid #FF5722;
+            border-radius: 10px;
+        }
+        .current-project-bar .label { color: #888; font-size: 0.8em; display: block; }
+        .current-project-name {
+            font-size: 1.35em;
+            font-weight: 600;
+            color: #FF5722;
+        }
+        .status-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .status-pill.unsaved { background: #5d4037; color: #ffcc80; }
+        .status-pill.saved { background: #1b5e20; color: #a5d6a7; }
+        .status-pill.draft { background: #37474f; color: #b0bec5; }
+        .section-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        #sectionCountLabel { color: #888; font-size: 0.85em; margin: 0; }
+        .btn-danger-outline {
+            background: transparent;
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+        .btn-danger-outline:hover {
+            background: #f44336;
+            color: white;
+            transform: none;
         }
     </style>
 </head>
@@ -282,72 +492,201 @@
     <div class="container">
         <div class="header-row">
             <h1>พรีเมียม Visual Builder (V2) 🎸</h1>
-            <div>
-                <button onclick="newProject()" class="btn-secondary">➕ New Project</button>
-                <button onclick="location.href='/'" class="btn-secondary" style="margin-left: 8px;">⬅ Back to
-                    Home</button>
+            <div class="header-actions">
+                <button type="button" onclick="location.href='/'" class="btn-secondary">⬅ หน้าหลัก</button>
             </div>
         </div>
 
-        <div class="row">
-            <div>
-                <label>ชื่อเพลง (Song Title):</label>
-                <input type="text" id="songTitle" value="Untitled Riff">
+        <!-- หน้า 1: รายการโปรเจกต์ (เริ่มที่นี่) -->
+        <div id="projectHub">
+            <div class="hub-header">
+                <h2 style="font-weight:300; margin:0;">โปรเจกต์ของคุณ</h2>
+                <p>1 เพลง = 1 โปรเจกต์ · แต่ละโปรเจกต์มีหลายแทป/ท่อน · เพลงใหม่ต้องสร้างโปรเจกต์ใหม่</p>
             </div>
+            <div class="hub-actions">
+                <button type="button" id="btnHubNewProject" class="btn-hub-create">➕ สร้างโปรเจกต์ใหม่ (เพลงใหม่)</button>
+            </div>
+            <div id="hubEmpty">
+                <p style="font-size:1.1em; margin:0 0 8px;">ยังไม่มีโปรเจกต์</p>
+                <p style="margin:0;">กดปุ่มด้านบนเพื่อสร้างเพลงแรกของคุณ</p>
+            </div>
+            <div id="projectList"></div>
         </div>
 
-        <p style="color: #aaa;">💡 คลิกที่คอกีตาร์ด้านล่างเพื่อเพิ่มโน้ตลงในแทปทันที (ประหยัดเวลามาก!)</p>
+        <!-- หน้า 2: แก้ไขภายในโปรเจกต์เดียว -->
+        <div id="projectEditor" hidden>
+            <div class="current-project-bar">
+                <div>
+                    <span class="label">โปรเจกต์ปัจจุบัน</span>
+                    <div id="currentProjectName" class="current-project-name">—</div>
+                </div>
+                <div>
+                    <span class="label">แทปที่กำลังแก้</span>
+                    <div id="currentSectionLabel" style="font-size:1.05em;">—</div>
+                </div>
+                <span id="projectStatusPill" class="status-pill draft">ร่าง</span>
+                <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" id="btnBackToHub" class="btn-secondary btn-small">← รายการโปรเจกต์</button>
+                    <button type="button" id="btnEditorNewSong" class="btn-secondary btn-small">➕ เพลงใหม่ (โปรเจกต์ใหม่)</button>
+                </div>
+            </div>
 
-        <div class="row" style="align-items: center; margin-bottom: 5px;">
-            <div style="flex: 0 0 auto;">
+            <div class="save-status-bar">
+                <div id="saveStatus" class="unsaved">—</div>
+                <button type="button" id="btnSaveWeb" class="btn-save-web">💾 บันทึกโปรเจกต์นี้</button>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="songTitle">ชื่อเพลง (โปรเจกต์นี้)</label>
+                    <input type="text" id="songTitle" placeholder="ชื่อเพลง">
+                </div>
+            </div>
+
+            <div class="section-toolbar">
+                <h3 style="margin:0;">แทปในโปรเจกต์นี้:</h3>
+                <p id="sectionCountLabel">0 แทป</p>
+                <div id="sectionTabs" style="flex:1; display:flex; flex-wrap:wrap; gap:8px;"></div>
+                <button type="button" id="btnNewSection" class="btn-secondary btn-small">+ เพิ่มแทป</button>
+                <button type="button" id="btnDeleteSection" class="btn-danger-outline btn-small">− ลบแทปนี้</button>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="sectionName">ชื่อแทปที่เลือก</label>
+                    <input type="text" id="sectionName" placeholder="Intro, Verse 1, Chorus">
+                </div>
+            </div>
+
+            <p style="color: #aaa;">💡 แทปทั้งหมดอยู่ในโปรเจกต์นี้เท่านั้น — เพลงอื่นกด <b>เพลงใหม่</b> หรือ <b>← รายการโปรเจกต์</b></p>
+
+        <div class="row" style="align-items: flex-start; margin-bottom: 5px; flex-direction: column; gap: 10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <input type="checkbox" id="isSlide" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="isSlide" style="cursor: pointer; color: white;">
+                    🔗 สไลด์จุดเดียว <b>/12</b> — คลิกเฟรตหนึ่งครั้ง
+                </label>
             </div>
-            <div>
-                <label for="isSlide" style="cursor: pointer; font-size: 1.1em; color: white;"> 🔗 เปิดโหมดลูกสไลด์
-                    (คลิกที่คอกีตาร์เพื่อทำ Slide จากโน้ตก่อนหน้านี้)</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="isSlideRange" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="isSlideRange" style="cursor: pointer; color: white;">
+                    ↔ สไลด์ช่วง <b>12/13</b> — คลิกเฟรตต้นทาง แล้วคลิกปลายทาง (สายเดียวกัน)
+                </label>
             </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="isHammer" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="isHammer" style="cursor: pointer; color: white;">
+                    <b style="color:#81c784;">H</b> Hammer-on <b>5h8</b> — คลิกเฟรตต่ำ แล้วสูง (สายเดียวกัน)
+                </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="isPull" style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="isPull" style="cursor: pointer; color: white;">
+                    <b style="color:#90caf9;">P</b> Pull-off <b>8p5</b> — คลิกเฟรตสูง แล้วต่ำ (สายเดียวกัน)
+                </label>
+            </div>
+            <p id="techniqueHint" style="display:none; margin:0; padding:10px 14px; background:#2a2a3d; border-radius:6px; color:#b0bec5; font-size:0.95em;"></p>
         </div>
 
         <div class="fretboard-outer">
-            <div class="fretboard" id="fretboard">
-                <!-- Strings will be generated by JS -->
-            </div>
-            <div class="fret-numbers" id="fret-numbers">
-                <!-- Numbers will be generated by JS -->
-            </div>
+            <div class="fretboard" id="fretboard"></div>
+            <div class="fret-numbers" id="fret-numbers"></div>
         </div>
 
         <div class="sequence-container">
-            <h3>รายการโน้ต (Sequence):</h3>
+            <h3>รายการโน้ต (Sequence)</h3>
             <div id="position-list" style="max-height: 250px; overflow-y: auto;">
                 <p style="color:#555; text-align:center; padding: 20px;">ยังไม่มีโน้ต เลือกที่คอกีตาร์ได้เลย</p>
             </div>
         </div>
 
         <div style="margin-top: 30px;">
-            <button onclick="generateTab()" style="width: 100%; font-size: 1.25em;">สร้างแทป (Generate Visual
-                Tab)</button>
+            <button type="button" onclick="generateTab()" style="width: 100%; font-size: 1.25em;">สร้างแทป (Generate)</button>
         </div>
 
-        <h3>ผลลัพธ์ (Visual Tab):</h3>
-        <button onclick="downloadTabTxt()" style="background: #4CAF50; margin-bottom: 15px;">📥 Download .txt</button>
+        <h3>ผลลัพธ์แทป</h3>
+        <p class="save-hint">💾 บันทึกแล้ว · hammer = 5h8 · pull-off = 8p5 · 🖼 = export PNG</p>
+        <div class="action-row">
+            <button type="button" id="btnSavePng" class="btn-export-png">🖼 Export PNG (ดาวน์โหลดรูป)</button>
+            <button type="button" onclick="downloadTabTxt()" class="btn-secondary">📥 Download .txt</button>
+            <button type="button" id="btnClearSection" class="btn-secondary">🗑 ล้างท่อนนี้</button>
+        </div>
         <pre class="tab-box" id="visual-tab">รอกดปุ่ม Generate...</pre>
+        </div><!-- /projectEditor -->
+    </div>
+
+    <!-- Export target (off-screen) -->
+    <div id="export-card"></div>
+    <div id="toast" class="toast" role="status"></div>
+
+    <!-- Modal: New Project -->
+    <div class="modal-overlay" id="modalNewProject">
+        <div class="modal-box">
+            <h2>สร้างโปรเจกต์ใหม่</h2>
+            <p style="color:#aaa; font-size:0.9em;">1 โปรเจกต์ = 1 เพลง — เริ่มด้วยแทป Intro</p>
+            <label for="newProjectTitleInput">ชื่อเพลง / โปรเจกต์</label>
+            <input type="text" id="newProjectTitleInput" placeholder="เช่น Wonderwall" style="margin-top: 8px;" autofocus>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" id="btnConfirmNewProject">สร้าง</button>
+                <button type="button" class="btn-secondary" data-modal-close>ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: New Section -->
+    <div class="modal-overlay" id="modalNewSection">
+        <div class="modal-box">
+            <h2>เพิ่มแทปในโปรเจกต์นี้</h2>
+            <label for="newSectionNameInput">ชื่อท่อน</label>
+            <input type="text" id="newSectionNameInput" placeholder="Intro" style="margin-top: 8px;">
+            <div class="preset-chips">
+                <button type="button" class="preset-chip" data-name="Intro">Intro</button>
+                <button type="button" class="preset-chip" data-name="Verse 1">Verse 1</button>
+                <button type="button" class="preset-chip" data-name="Chorus">Chorus</button>
+                <button type="button" class="preset-chip" data-name="Bridge">Bridge</button>
+                <button type="button" class="preset-chip" data-name="Solo">Solo</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" id="btnConfirmNewSection">เพิ่มท่อน</button>
+                <button type="button" class="btn-secondary" data-modal-close>ยกเลิก</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const TUNING_OPEN_MIDI = [64, 59, 55, 50, 45, 40]; // E, B, G, D, A, E
+        const TUNING_OPEN_MIDI = [64, 59, 55, 50, 45, 40];
         const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        let manualSequence = [];
+        window.manualSequence = [];
+        let pendingSlideRange = null;
+        let pendingLegato = null;
+
+        const TECHNIQUE_IDS = ['isSlide', 'isSlideRange', 'isHammer', 'isPull'];
+
+        function clearTechniqueModes(exceptId) {
+            TECHNIQUE_IDS.forEach(id => {
+                if (id !== exceptId) {
+                    const el = document.getElementById(id);
+                    if (el) el.checked = false;
+                }
+            });
+            if (exceptId !== 'isSlideRange') pendingSlideRange = null;
+            if (exceptId !== 'isHammer' && exceptId !== 'isPull') pendingLegato = null;
+            updateTechniqueHint();
+        }
+
+        TECHNIQUE_IDS.forEach(id => {
+            document.getElementById(id)?.addEventListener('change', (e) => {
+                if (e.target.checked) clearTechniqueModes(id);
+                else updateTechniqueHint();
+            });
+        });
 
         function getNoteName(stringIdx, fret) {
             const openMidi = TUNING_OPEN_MIDI[stringIdx];
             const midi = openMidi + fret;
-            const noteIndex = midi % 12;
-            const octave = Math.floor(midi / 12) - 1;
-            return NOTE_NAMES[noteIndex] + octave;
+            return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
         }
 
-        // Initialize Fretboard
         const fb = document.getElementById('fretboard');
         const fn = document.getElementById('fret-numbers');
         const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -357,38 +696,29 @@
             const row = document.createElement('div');
             row.className = 'string-row';
             row.dataset.string = sNum;
-
-            const line = document.createElement('div');
-            line.className = 'string-line';
-            row.appendChild(line);
+            row.appendChild(Object.assign(document.createElement('div'), { className: 'string-line' }));
 
             for (let f = 0; f <= 24; f++) {
                 const cell = document.createElement('div');
                 cell.className = 'fret-cell';
-                cell.onclick = () => addPosition(sNum, f);
-
-                // Add marker dots
+                cell.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    addPosition(sNum, f);
+                });
                 if (MARKER_FRETS.includes(f)) {
-                    if (f === 12 || f === 24) {
-                        if (sNum === 2 || sNum === 4) cell.dataset.marker = "true"; // Double dot
-                    } else {
-                        if (sNum === 4) cell.dataset.marker = "true"; // Single dot on D string
-                    }
+                    if ((f === 12 || f === 24) && (sNum === 2 || sNum === 4)) cell.dataset.marker = 'true';
+                    else if (sNum === 4) cell.dataset.marker = 'true';
                 }
-
-                const note = getNoteName(sIdx, f);
                 const marker = document.createElement('div');
                 marker.className = 'note-marker';
-                marker.dataset.note = note;
-                marker.innerText = note;
+                marker.dataset.note = getNoteName(sIdx, f);
+                marker.innerText = marker.dataset.note;
                 cell.appendChild(marker);
-
                 row.appendChild(cell);
             }
             fb.appendChild(row);
         }
 
-        // Fret Numbers
         for (let f = 0; f <= 24; f++) {
             const num = document.createElement('div');
             num.className = 'fret-num';
@@ -396,169 +726,327 @@
             fn.appendChild(num);
         }
 
-        function addPosition(string, fret) {
-            const isSlide = document.getElementById('isSlide').checked;
+        function notifySequenceChange() {
+            if (window.V2Project) V2Project.onSequenceChanged();
+        }
 
-            if (isSlide && manualSequence.length === 0) {
-                alert("โน้ตตัวแรกไม่สามารถใช้ลูกสไลด์ได้ครับ!");
-                document.getElementById('isSlide').checked = false;
+        function updateTechniqueHint() {
+            const el = document.getElementById('techniqueHint');
+            if (!el) return;
+            if (pendingSlideRange) {
+                el.style.display = 'block';
+                el.textContent = `👉 สไลด์: คลิกปลายทางบนสาย ${pendingSlideRange.string} → ${pendingSlideRange.fret}/…`;
+                return;
+            }
+            if (pendingLegato) {
+                el.style.display = 'block';
+                const label = pendingLegato.type === 'hammer' ? 'H' : 'P';
+                el.textContent = `👉 ${label}: คลิกเฟรตตัวที่สองบนสาย ${pendingLegato.string} (สายเดียวกัน)`;
+                return;
+            }
+            if (document.getElementById('isSlideRange')?.checked) {
+                el.style.display = 'block';
+                el.textContent = '👉 สไลด์ 12/13: คลิกเฟรตต้นทาง แล้วปลายทาง';
+                return;
+            }
+            if (document.getElementById('isHammer')?.checked) {
+                el.style.display = 'block';
+                el.textContent = '👉 Hammer-on: คลิกเฟรตต่ำก่อน (เช่น 5) แล้วสูง (เช่น 8) → 5h8';
+                return;
+            }
+            if (document.getElementById('isPull')?.checked) {
+                el.style.display = 'block';
+                el.textContent = '👉 Pull-off: คลิกเฟรตสูงก่อน (เช่น 8) แล้วต่ำ (เช่น 5) → 8p5';
+                return;
+            }
+            el.style.display = 'none';
+        }
+
+        function legatoSegment(pos) {
+            if (pos.legatoToFret == null) return null;
+            const link = pos.legatoType === 'pull' ? 'p' : 'h';
+            return `${pos.fret}${link}${pos.legatoToFret}`;
+        }
+
+        function addPosition(string, fret) {
+            const isSlideRange = document.getElementById('isSlideRange').checked;
+            const isSlide = document.getElementById('isSlide').checked;
+            const isHammer = document.getElementById('isHammer').checked;
+            const isPull = document.getElementById('isPull').checked;
+
+            if (isHammer || isPull) {
+                const legatoType = isHammer ? 'hammer' : 'pull';
+                if (!pendingLegato) {
+                    pendingLegato = { string, fret, type: legatoType };
+                    updateTechniqueHint();
+                    return;
+                }
+                if (pendingLegato.string !== string) {
+                    alert('Hammer-on / Pull-off ต้องอยู่สายเดียวกันครับ');
+                    return;
+                }
+                if (pendingLegato.fret === fret) {
+                    alert('เฟรตสองตัวต้องไม่ซ้ำกัน');
+                    return;
+                }
+                if (legatoType === 'hammer' && fret <= pendingLegato.fret) {
+                    alert('Hammer-on ต้องคลิกเฟรตต่ำก่อน แล้วสูงกว่า (เช่น 5 แล้ว 8)');
+                    return;
+                }
+                if (legatoType === 'pull' && fret >= pendingLegato.fret) {
+                    alert('Pull-off ต้องคลิกเฟรตสูงก่อน แล้วต่ำกว่า (เช่น 8 แล้ว 5)');
+                    return;
+                }
+                window.manualSequence.push({
+                    string,
+                    fret: pendingLegato.fret,
+                    legatoToFret: fret,
+                    legatoType,
+                    modifier: legatoType
+                });
+                pendingLegato = null;
+                document.getElementById('isHammer').checked = false;
+                document.getElementById('isPull').checked = false;
+                updateTechniqueHint();
+                renderList();
+                notifySequenceChange();
                 return;
             }
 
-            manualSequence.push({
-                string: string,
-                fret: fret,
-                modifier: isSlide ? '/' : null
-            });
+            if (isSlideRange) {
+                if (!pendingSlideRange) {
+                    pendingSlideRange = { string, fret };
+                    updateTechniqueHint();
+                    return;
+                }
+                if (pendingSlideRange.string !== string) {
+                    alert('สไลด์ช่วง 12/13 ต้องอยู่สายเดียวกันครับ');
+                    return;
+                }
+                if (pendingSlideRange.fret === fret) {
+                    alert('เฟรตปลายทางต้องไม่ซ้ำกับต้นทาง');
+                    return;
+                }
+                window.manualSequence.push({
+                    string,
+                    fret: pendingSlideRange.fret,
+                    slideToFret: fret,
+                    modifier: 'range'
+                });
+                pendingSlideRange = null;
+                document.getElementById('isSlideRange').checked = false;
+                updateTechniqueHint();
+                renderList();
+                notifySequenceChange();
+                return;
+            }
+
+            if (isSlide) {
+                window.manualSequence.push({ string, fret, modifier: '/' });
+                document.getElementById('isSlide').checked = false;
+            } else {
+                window.manualSequence.push({ string, fret, modifier: null });
+            }
             renderList();
-            document.getElementById('isSlide').checked = false; // รีเซ็ตโหมดสไลด์
+            notifySequenceChange();
+        }
+
+        function formatSequenceLabel(pos) {
+            const seg = legatoSegment(pos);
+            if (seg) {
+                const color = pos.legatoType === 'pull' ? '#90caf9' : '#81c784';
+                return `<b style="color:${color}">${seg}</b> <span style="color:#888;">(สาย ${pos.string})</span>`;
+            }
+            if (pos.slideToFret != null) {
+                return `<b style="color:#FF9800">${pos.fret}/${pos.slideToFret}</b> <span style="color:#888;">(สาย ${pos.string})</span>`;
+            }
+            if (pos.modifier === '/') {
+                return `<b style="color:#FF9800">/${pos.fret}</b> <span style="color:#888;">(สาย ${pos.string})</span>`;
+            }
+            const noteName = getNoteName(pos.string - 1, pos.fret);
+            return `สาย ${pos.string} เฟรต ${pos.fret} (<span style="color:var(--accent-color)">${noteName}</span>)`;
         }
 
         function removePosition(index) {
-            manualSequence.splice(index, 1);
+            window.manualSequence.splice(index, 1);
             renderList();
+            notifySequenceChange();
         }
 
         function renderList() {
             const listDiv = document.getElementById('position-list');
             listDiv.innerHTML = '';
-
-            // 1. Clear existing fretboard highlights
             document.querySelectorAll('.note-marker').forEach(marker => {
                 marker.classList.remove('selected', 'last');
-                marker.innerText = marker.dataset.note; // Reset to original note name
-                marker.style.fontSize = "10px"; // Reset font size
+                marker.innerText = marker.dataset.note;
+                marker.style.fontSize = '10px';
             });
 
-            if (manualSequence.length === 0) {
+            if (window.manualSequence.length === 0) {
                 listDiv.innerHTML = '<p style="color:#555; text-align:center; padding: 20px;">ยังไม่มีโน้ต เลือกที่คอกีตาร์ได้เลย</p>';
                 return;
             }
 
-            manualSequence.forEach((pos, idx) => {
-                const noteName = getNoteName(pos.string - 1, pos.fret);
-                const slideText = pos.modifier === '/' ? ' <span style="color:#FF9800;">(Slide)</span>' : '';
+            window.manualSequence.forEach((pos, idx) => {
                 const item = document.createElement('div');
                 item.className = 'coord-item';
-                item.innerHTML = `
-                    <span><b>โน้ต #${idx + 1}:</b> สาย ${pos.string} เฟรต ${pos.fret} (<span style="color:var(--accent-color)">${noteName}</span>)${slideText}</span>
-                    <button class="danger-btn" onclick="removePosition(${idx})">ลบออก</button>
-                `;
+                item.innerHTML = `<span><b>#${idx + 1}:</b> ${formatSequenceLabel(pos)}</span>
+                    <button type="button" class="danger-btn" onclick="removePosition(${idx})">ลบ</button>`;
                 listDiv.appendChild(item);
 
-                // 2. Highlight on fretboard (Visual Persistence)
                 const row = document.querySelector(`.string-row[data-string="${pos.string}"]`);
-                if (row) {
-                    const cell = row.querySelectorAll('.fret-cell')[pos.fret];
-                    if (cell) {
-                        const marker = cell.querySelector('.note-marker');
+                const markCell = (fretNum, label, isLast) => {
+                    const cell = row?.querySelectorAll('.fret-cell')[fretNum];
+                    const marker = cell?.querySelector('.note-marker');
+                    if (marker) {
                         marker.classList.add('selected');
-                        if (idx === manualSequence.length - 1) {
-                            marker.classList.add('last');
-                        }
-                        marker.innerText = idx + 1; // Show sequence number
-                        marker.style.fontSize = "14px";
+                        if (isLast) marker.classList.add('last');
+                        marker.innerText = label;
+                        marker.style.fontSize = '14px';
                     }
+                };
+                if (pos.legatoToFret != null) {
+                    const seg = legatoSegment(pos);
+                    markCell(pos.fret, seg, idx === window.manualSequence.length - 1);
+                } else if (pos.slideToFret != null) {
+                    markCell(pos.fret, `${pos.fret}/${pos.slideToFret}`, false);
+                    markCell(pos.slideToFret, '→', idx === window.manualSequence.length - 1);
+                } else {
+                    markCell(pos.fret, String(idx + 1), idx === window.manualSequence.length - 1);
                 }
             });
-            // Auto scroll to bottom
-            const container = document.getElementById('position-list');
-            container.scrollTop = container.scrollHeight;
+            listDiv.scrollTop = listDiv.scrollHeight;
         }
 
         async function generateTab() {
-            if (manualSequence.length === 0) { alert("กรุณาเลือกโน้ตก่อนครับ!"); return; }
-
-            const notesPayload = manualSequence.map(p => {
-                let code = `S${p.string}F${p.fret}`;
+            if (window.manualSequence.length === 0) {
+                alert('กรุณาเลือกโน้ตก่อนครับ!');
+                return;
+            }
+            const notesPayload = window.manualSequence.map(p => {
+                const seg = legatoSegment(p);
+                if (seg) {
+                    const link = p.legatoType === 'pull' ? 'p' : 'h';
+                    return `S${p.string}F${p.fret}${link}${p.legatoToFret}`;
+                }
+                if (p.slideToFret != null) {
+                    return `S${p.string}F${p.fret}/${p.slideToFret}`;
+                }
+                const code = `S${p.string}F${p.fret}`;
                 return p.modifier === '/' ? `/${code}` : code;
             });
-            const payload = {
-                notes: notesPayload,
-                min_fret: 0,
-                max_fret: 24,
-                allowed_strings: [1, 2, 3, 4, 5, 6]
-            };
-
+            const localTab = drawTabFromSequence(window.manualSequence);
             try {
                 const response = await fetch('/api/tab/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        notes: notesPayload,
+                        min_fret: 0,
+                        max_fret: 24,
+                        allowed_strings: [1, 2, 3, 4, 5, 6]
+                    })
                 });
                 const data = await response.json();
-                if (data.tab_path) {
-                    document.getElementById('visual-tab').innerText = drawASCII(data.tab_path);
-                }
+                const text = (data.tab_path && data.tab_path.length)
+                    ? drawASCII(data.tab_path)
+                    : localTab;
+                document.getElementById('visual-tab').innerText = text;
+                if (window.V2Project) await V2Project.onTabGenerated(text);
             } catch (err) {
-                document.getElementById('visual-tab').innerText = "เกิดข้อผิดพลาด: " + err;
+                document.getElementById('visual-tab').innerText = localTab || ('เกิดข้อผิดพลาด: ' + err);
             }
         }
 
-        function drawASCII(tabData) {
-            if (!tabData || tabData.length === 0) return "No path generated.";
+        function appendToTabStrings(strings, pos, segment) {
+            const pad = segment.length + 2;
+            for (let i = 1; i <= 6; i++) {
+                strings[i] += i === pos.string ? `-${segment}-` : '-'.repeat(pad);
+            }
+        }
 
-            const strings = {
-                1: "e|---", 2: "B|---", 3: "G|---", 4: "D|---", 5: "A|---", 6: "E|---"
-            };
-
-            tabData.forEach((pos, idx) => {
-                let fretStr = pos.fret.toString();
-                let isSlideNext = (idx + 1 < tabData.length && tabData[idx + 1].modifier === '/');
-
+        /** วาดแทป + บรรทัด H/P เหนือสาย (แบบในรูปแทป) */
+        function drawTabFromSequence(seq) {
+            if (!seq?.length) return 'No path generated.';
+            const strings = { 1: 'e|---', 2: 'B|---', 3: 'G|---', 4: 'D|---', 5: 'A|---', 6: 'E|---' };
+            seq.forEach((pos, idx) => {
+                const seg = legatoSegment(pos);
+                if (seg) {
+                    appendToTabStrings(strings, pos, seg);
+                    return;
+                }
+                if (pos.slideToFret != null) {
+                    appendToTabStrings(strings, pos, `${pos.fret}/${pos.slideToFret}`);
+                    return;
+                }
+                const fretStr = String(pos.fret);
+                const isSlide = pos.modifier === '/';
+                const slideOnSameStringNext = idx + 1 < seq.length
+                    && seq[idx + 1].modifier === '/'
+                    && seq[idx + 1].string === pos.string;
                 for (let i = 1; i <= 6; i++) {
                     if (i === pos.string) {
-                        if (pos.modifier === '/') {
-                            strings[i] += "/" + fretStr;
-                        } else {
-                            strings[i] += "-" + fretStr;
-                        }
-                        if (!isSlideNext) strings[i] += "-";
+                        strings[i] += (isSlide ? '/' : '-') + fretStr;
+                        if (!slideOnSameStringNext) strings[i] += '-';
                     } else {
-                        let addedWidth = fretStr.length + 1;
-                        strings[i] += "-".repeat(addedWidth);
-                        if (!isSlideNext) strings[i] += "-";
+                        strings[i] += '-'.repeat(fretStr.length + 1);
+                        if (!slideOnSameStringNext) strings[i] += '-';
                     }
                 }
             });
+            return [1, 2, 3, 4, 5, 6].map(i => strings[i] + '---|').join('\n');
+        }
 
-            let out = [];
-            for (let i = 1; i <= 6; i++) {
-                out.push(strings[i] + "---|");
-            }
-            return out.join("\n");
+        function drawASCII(tabData) {
+            if (!tabData?.length) return 'No path generated.';
+            return drawTabFromSequence(tabData.map(p => ({
+                string: p.string,
+                fret: p.fret,
+                modifier: p.modifier,
+                slideToFret: p.slideToFret,
+                legatoToFret: p.legatoToFret,
+                legatoType: p.legatoType || (p.modifier === 'pull' ? 'pull' : p.modifier === 'hammer' ? 'hammer' : null)
+            })));
         }
 
         function downloadTabTxt() {
-            if (manualSequence.length === 0) return alert("ไม่มีข้อมูลให้โหลดครับ");
+            if (window.manualSequence.length === 0) return alert('ไม่มีข้อมูลให้โหลดครับ');
             const tabText = document.getElementById('visual-tab').innerText;
-            const songTitle = document.getElementById('songTitle').value || "Untitled";
-            const filename = songTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + "_tab_v2.txt";
-            let details = `Guitar Tab: ${songTitle}\nGenerated by Premium Visual Builder V2\n\n${tabText}\n\nDetails:\n`;
-            manualSequence.forEach((pos, i) => {
-                const noteName = getNoteName(pos.string - 1, pos.fret);
-                details += `[${i + 1}] String ${pos.string}, Fret ${pos.fret} (${noteName})\n`;
+            const songTitle = document.getElementById('songTitle').value || 'Untitled';
+            const sectionName = document.getElementById('sectionName').value || 'section';
+            const filename = `${songTitle}_${sectionName}`.replace(/[^\w\u0E00-\u0E7F-]+/gi, '_') + '_tab.txt';
+            let details = `Guitar Tab: ${songTitle} — ${sectionName}\n\n${tabText}\n\nDetails:\n`;
+            window.manualSequence.forEach((pos, i) => {
+                const seg = legatoSegment(pos);
+                if (seg) {
+                    details += `[${i + 1}] ${seg} (${pos.legatoType === 'pull' ? 'Pull-off' : 'Hammer-on'}) สาย ${pos.string}\n`;
+                } else if (pos.slideToFret != null) {
+                    details += `[${i + 1}] ${pos.fret}/${pos.slideToFret} (Slide) สาย ${pos.string}\n`;
+                } else if (pos.modifier === '/') {
+                    details += `[${i + 1}] /${pos.fret} สาย ${pos.string}\n`;
+                } else {
+                    details += `[${i + 1}] String ${pos.string}, Fret ${pos.fret} (${getNoteName(pos.string - 1, pos.fret)})\n`;
+                }
             });
-            const blob = new Blob([details], { type: "text/plain" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([details], { type: 'text/plain' }));
             link.download = filename;
             link.click();
         }
 
-        function newProject() {
-            if (manualSequence.length > 0 && confirm("เริ่มเพลงใหม่? ข้อมูลเดิมจะหายไปนะ")) {
-                manualSequence = [];
-                document.getElementById('isSlide').checked = false;
-                renderList();
-                document.getElementById('visual-tab').innerText = "รอกดปุ่ม Generate...";
-            }
-        }
+        window.renderList = renderList;
+        window.generateTab = generateTab;
     </script>
+    <script src="/static/v2-project.js?v=7"></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js');
+            window.addEventListener('load', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.register('/service-worker.js?v=5');
+                    await reg.update();
+                } catch (e) {
+                    console.warn('Service worker registration failed', e);
+                }
             });
         }
     </script>

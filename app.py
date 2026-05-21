@@ -2,6 +2,11 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
+
+HTML_NO_CACHE = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+}
 from fastapi.staticfiles import StaticFiles
 import os
 
@@ -53,8 +58,11 @@ def read_root():
     html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>UI is missing</h1><p>Please ensure static/index.html exists</p>"
+            return HTMLResponse(content=f.read(), headers=HTML_NO_CACHE)
+    return HTMLResponse(
+        content="<h1>UI is missing</h1><p>Please ensure static/index.html exists</p>",
+        headers=HTML_NO_CACHE,
+    )
 
 @app.get("/manual", response_class=HTMLResponse)
 def read_manual_page():
@@ -64,8 +72,8 @@ def read_manual_page():
     html_path = os.path.join(os.path.dirname(__file__), "static", "manual.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>Manual.html is missing</h1>"
+            return HTMLResponse(content=f.read(), headers=HTML_NO_CACHE)
+    return HTMLResponse(content="<h1>Manual.html is missing</h1>", headers=HTML_NO_CACHE)
 
 @app.get("/v2", response_class=HTMLResponse)
 def read_v2_page():
@@ -75,8 +83,11 @@ def read_v2_page():
     html_path = os.path.join(os.path.dirname(__file__), "static", "fretboard_builder.html")
     if os.path.exists(html_path):
         with open(html_path, "r", encoding="utf-8") as f:
-            return f.read()
-    return "<h1>fretboard_builder.html is missing</h1>"
+            return HTMLResponse(content=f.read(), headers=HTML_NO_CACHE)
+    return HTMLResponse(
+        content="<h1>fretboard_builder.html is missing</h1>",
+        headers=HTML_NO_CACHE,
+    )
 
 @app.post("/api/tab/generate")
 def api_generate_tab(req: TabGenerateRequest):
@@ -103,15 +114,15 @@ def api_manual_override(req: ManualOverrideRequest):
     """ Phase 3.2 & 4: รับข้อมูลตอนผู้ใช้แก้โน้ต บันทึกประวัติ และคำนวณ path ใหม่จากจุดนั้น """
     logger.info(f"--- Manual Override Request ---")
     logger.debug(f"Edited Index: {req.edited_index} | Profile: {req.profile_id}")
-    old_pos = req.tab_state[req.edited_index].dict()
-    new_pos = req.new_position.dict()
+    old_pos = req.tab_state[req.edited_index].model_dump()
+    new_pos = req.new_position.model_dump()
     logger.debug(f"Old Position: {old_pos} -> New Position: {new_pos}")
     
     # 1. บันทึกเป็น Learning History
     save_edit_history(old_pos, new_pos, req.profile_id)
     
     # 2. อัปเดตตำแหน่ง
-    updated_state = [p.dict() for p in req.tab_state]
+    updated_state = [p.model_dump() for p in req.tab_state]
     updated_state[req.edited_index] = new_pos
     
     # 3. Recalculate ส่วนที่เหลือ
@@ -135,8 +146,7 @@ def api_manual_override(req: ManualOverrideRequest):
 def api_learning_stats(profile_id: str = "default"):
     """ Return learning history and bonus scoring for dashboard """
     try:
-        # Pydantic v1 vs v2 dict conversion wrapper
-        history = [h.dict() if hasattr(h, 'dict') else h.model_dump() for h in DB_EDIT_HISTORY if h.profile_id == profile_id]
+        history = [h.model_dump() for h in DB_EDIT_HISTORY if h.profile_id == profile_id]
     except Exception:
         history = []
         
@@ -170,6 +180,15 @@ def api_recalculate(req: RecalculateRequest):
     return {"recalc_path": recalc_path}
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    # run with python app.py
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
+    # รันแบบปกติ: ไม่ reload — ปิดเมื่อกด Ctrl+C หรือปิดหน้าต่าง Terminal
+    # โหมดพัฒนา:  set DEV_RELOAD=1  แล้ว python app.py
+    dev_reload = os.getenv("DEV_RELOAD", "").lower() in ("1", "true", "yes")
+    uvicorn.run(
+        "app:app",
+        host="127.0.0.1",
+        port=int(os.getenv("PORT", "8000")),
+        reload=dev_reload,
+    )

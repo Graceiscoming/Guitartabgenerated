@@ -1,41 +1,85 @@
 # Patch Notes
+
 ---
 
-## V1.0 - The Smart Guitar Tab Ecosystem (Core System)
+## V1.0 — Smart Guitar Tab Ecosystem (Core)
 
-- **[Core] Smart Guitar Tab Generator:** ระบบหน้าหลัก สร้างแทปกีตาร์อัจฉริยะอัตโนมัติจากการพิมพ์ชื่อโน้ต (เช่น C, D, E) พร้อมรองรับ Modifier เพื่อปรับระดับเสียงขึ้นลง (`^`, `%`) และโหมด Full Guitar / Midi
-- **[Core] Interactive Tab Editor:** ผู้ใช้สามารถคลิกแก้ไขตำแหน่งโน้ตในแทปที่ถูกสุ่มขึ้นมา (ระบุสายและเฟรตใหม่) แบบ Real-time และระบบจะคำนวณโน้ตที่เหลือในเส้นทางให้ใหม่ทันที
-- **[AI] AI Learning Dashboard:** ระบบ AI Machine Learning ที่คอยจดจำพฤติกรรมการแก้ไขแทปด้วยตนเอง (Manual Override) และเก็บสถิติ "ความชอบผู้ใช้" (Favorites) เพื่อให้คะแนนน้ำหนักพิเศษ (Bonus Distance) เวลาปั้นตัวโน้ตอัตโนมัติในครั้งต่อไป
-- **[Feature] Manual Position Builder:** หน้าต่าง `/manual` สำหรับสร้างแทปจากการพิมพ์ระบุหมายเลขสาย (String 1-6) และตำแหน่งเฟรต (0-24) ด้วยตนเองทีละตัว พร้อมรองรับเครื่องหมายสไลด์ `/` และการไล่เรียงโน้ตเป็นรายการพร้อมชื่อโน้ตอัตโนมัติ
-- **[Feature] โหมด Export:** ทุกเครื่องมือรองรับการดาวน์โหลดแทปรูปแบบ ASCII ออกมาเป็นไฟล์ข้อมูล `.txt` อย่างสมบูรณ์พร้อมกับ Metadata ต่างๆ
-- **[Beta] Initial Visual Fretboard Builder:** หน้าต่างคอกีตาร์จำลอง 15 เฟรตแบบพื้นฐาน สำหรับกดเลือกเพิ่มคิวโน้ต (มีบัคคำสั่งรันเซิร์ฟเวอร์ทำให้เข้าใช้งานฟังก์ชันนี้ไม่สำเร็จ)
+- **[Core] Smart Guitar Tab Generator:** สร้างแทปอัตโนมัติจากชื่อโน้ต (C, D, E…) รองรับ Modifier `^` / `%` และโหมด Full Guitar / Midi
+- **[Core] Interactive Tab Editor:** คลิกแก้ตำแหน่งบนแทป ระบบคำนวณโน้ตที่เหลือใหม่ทันที
+- **[AI] AI Learning Dashboard:** จดจำ Manual Override สร้าง Favorites / Bonus Distance สำหรับรอบถัดไป
+- **[Feature] Manual Position Builder (`/manual`):** ระบุสาย 1–6 และเฟรต 0–24 ทีละตำแหน่ง
+- **[Feature] Export .txt:** ดาวน์โหลดแทป ASCII พร้อม Metadata
 
+---
 
-## V2.0 - 26/3/2026 (Premium Visual Builder Update)
-**1. การแก้ไขฝั่ง Backend (`main_v2.py`)**
-- **[Fix]** แก้ไขบัคจุดเริ่มต้น (Entry point) ของเซิร์ฟเวอร์ โดยเปลี่ยนคำสั่งรันเซิร์ฟเวอร์ `uvicorn.run()` ให้ชี้ไปที่แอปพลิเคชันที่ถูกต้อง (`main_v2:app` แทน `main:app`) ทำให้หน้า API แตกแขนงไปที่ `/v2` สามารถเข้าถึงได้และทำงานตามปกติ
+## V2.0 — Visual Builder, โปรเจกต์ & เทคนิคแทป (21/5/2026)
 
-**2. อัปเกรดส่วนติดต่อผู้ใช้ Visual Fretboard Builder (`static/fretboard_builder.html`)**
-- **[Feature] คอกีตาร์แบบเต็ม 24 เฟรต:** ขยายความยาวของคอกีตาร์จำลองให้รองรับโน้ตได้ลึกถึงเฟรตที่ 24 พร้อมระบบ Scrollbar แนวนอน (โดยเปิดหน้าต่างมาจะโฟกัสที่ 15 เฟรตแรกให้เห็นชัดเจนตามปกติ)
-- **[Feature] จุดมาร์คคอกีตาร์ (Fret Markers):** เพิ่มจุดมาร์คตำแหน่งเฟรตเหมือนกีตาร์ของจริง เพื่อให้เล็งตำแหน่งได้ลื่นไหล (จุดเดี่ยวที่เฟรต 3, 5, 7, 9, 15, 17, 19, 21 และจุดคู่ที่เฟรต 12 กับ 24)
-- **[Feature] โหมดลูกสไลด์ (Slide Mode):** เพิ่มจุด Checkbox 🔗 **"เปิดโหมดลูกสไลด์"**  ทำให้ผู้ใช้สามารถตั้งค่าให้โน้ตตัวถัดไปที่คลิก เป็นการลากนิ้ว Slide จากโน้ตก่อนหน้านั้นได้ทันที และระบบมีการป้องกันไม่ให้กด Slide ในโน้ตตัวแรกสุด มีกำกับรายละเอียดการ Slide ลงในรายการโน้ต และในกล่อง ASCII Tab ด้านล่างอย่างถูกต้อง
-- **[Feature] ระบบความจำภาพ (Visual Persistence):** แก้ไขให้โน้ตที่ผู้ใช้คลิกเลือก แสดงเครื่องหมายค้างไว้บนคอกีตาร์ (ตัวล่าสุดเน้นเป็นสีส้ม ตัวอื่นๆ เป็นสีเขียว) และมีตัวเลข **Sequence Number (1, 2, 3...)** ระบุไว้ในวงกลม เพื่อระบุลำดับของการเล่นได้ชัดเจนยิ่งขึ้น ทำให้แต่งแทปได้ง่าย ไม่หลงตำแหน่ง
-- **[Enhancement] อัปเกรดมุมมองความชัดเจน (UI Polish):** 
-  - เปลี่ยนสีสายกีตาร์และขนาดของตัวเลขบอกเลขเฟรตด้านล่างเป็นหน้าหนังสือสีขาว (White) ตัดกับพื้นหลังสีเทา 
-  - ซ้อนเงา (Drop shadow) เข้าไปที่สายกีตาร์ ทำให้สายดูเป็น 3 มิติ และกวาดตามองได้ง่ายดายยิ่งขึ้น
-- **[Enhancement] ซิงค์ระบบการจด Tab (ASCII Logic):** ปรับตรรกะช่วงเส้น ASCII Tab ด้านล่างของหน้านี้ ให้รองรับการ Slide ตรงกับการทำงานของหน้า Manual Tab อย่างสมบูรณ์
+> รุ่นหลักที่รวม Backend เดียว (`app.py`), Visual Builder แบบโปรเจกต์, เทคนิคกีตาร์ครบชุด และการรันเซิร์ฟเวอร์แบบเปิด–ปิดได้
 
-## V2.1 - 26/3/2026 (Standalone App & UI Polish Update)
+### แกนกลางระบบ (Backend & Launcher)
 
-### 📲 Desktop App Integration (PWA & Launcher)
-- **[Feature] Progressive Web App (PWA):** อัปเกรดระบบให้รองรับการกด "Install" เพื่อติดตั้งเป็นแอปพลิเคชันเดี่ยวบนคอมพิวเตอร์ได้เลย (มีหน้าต่างแอปส่วนตัว ไม่มีแถบเบราว์เซอร์เกะกะ นำโลโก้กีตาร์ 🎸 สีส้มไปตั้งบน Desktop และ Taskbar ได้จริง)
-- **[Feature] Desktop Launcher:** สร้างสคริปต์ `run_app.bat` สำหรับให้ผู้ใช้ดับเบิลคลิกเพื่อเริ่มทำงานเซิร์ฟเวอร์ และเด้งเปิดหน้าต่างแอปขึ้นมาทำงานให้อัตโนมัติอย่างง่ายดาย
-- **[Core] PWA Config:** สร้างไฟล์ `manifest.json`, `service-worker.js` และโลโก้ `icon.svg` เพื่อเตรียมแอปให้เป็นมาตรฐาน Web App เต็มรูปแบบ
+- **[Core] Unified Backend (`app.py`):** รวม `main.py` / `main_v2.py` เป็นจุดเข้าเดียว — routes `/`, `/v2`, `/manual`, API ครบ
+- **[Core] Guitar Logic Engine:** Greedy pathfinding 24 เฟรต, รองรับ `S3F10`, slide, hammer-on, pull-off ผ่าน `parse_tab_token()`
+- **[Fix] เซิร์ฟเวอร์รันเมื่อสั่งเท่านั้น:** `run_app.bat` รัน `python app.py` แบบ foreground — **ปิดหน้าต่างหรือ Ctrl+C = หยุด** (ไม่ใช้ `start /B` ค้างหลังปิด)
+- **[Feature] `stop_app.bat`:** ปิด process ที่ค้างบน port 8000
+- **[Feature] โหมดพัฒนา:** ตั้ง `DEV_RELOAD=1` ก่อน `python app.py` เพื่อเปิด auto-reload (ปกติปิดไว้)
+- **[Fix] Service Worker:** ไม่แคชหน้า `/v2` แบบเก่า — โหลด HTML/JS จากเซิร์ฟเวอร์เสมอ (`cache v7`, network-first)
 
-### 🛠 System Core & UI Enhancements
-- **[Core] Unified Backend แกนกลางเดียว (`app.py`):** ทำการควบรวมหน้า `main.py` (หน้าหลักรุ่นเก่า) และ `main_v2.py` (หน้าหลักรุ่นใหม่) เข้าด้วยกันอย่างสมบูรณ์แบบเป็นไฟล์เดียวคือ `app.py` ลดระยะการเขียนโค้ดและป้องกันช่องโหว่พังทลาย
-- **[UI/UX] อัปเกรดแถบเมนูนำทาง (Premium Navigation):** 
-  - รื้อโครงสร้างปุ่มด้านบนใหม่ทั้งหมดด้วยระบบ Flexbox ช่วยแก้ปัญหาปุ่มทับซ้อนตกบรรทัดเมื่อยืดหดหน้าต่าง
-  - เปลี่ยนการลงสีปุ่มให้เป็นการไล่เฉดสี (Gradient) และใส่เงาลึก (Drop shadow) เพื่อความหรูหรา
-  - เพิ่มลูกเล่นลอยตัวเวลาชี้เมาส์ (Hover Effect)
-  - เพิ่มปุ่มลัดลิงก์ไปมาระหว่างเมนู `🎸 Visual Builder`, `🛠 Manual Builder` และหน้าธรรมดา ให้ครบคลุมทุกพื้นที่ เพื่อลดความยุ่งยากในการพิมพ์ URL ย้ายหน้าเอง
+### PWA & Desktop
+
+- **[Feature] Progressive Web App (PWA):** `manifest.json`, `service-worker.js`, `icon.svg` — ติดตั้งเป็นแอปบน Desktop ได้
+- **[Feature] Desktop Launcher:** `run_app.bat` เปิดเซิร์ฟเวอร์ + เบราว์เซอร์ไป `/v2`
+
+### Visual Fretboard Builder (`/v2`) — คอกีตาร์ & UI
+
+- **[Feature] คอกีตาร์ 24 เฟรต:** Scroll แนวนอน, Fret markers (3–24), สาย 3D shadow
+- **[Feature] Visual Persistence:** โน้ตที่เลือกค้างบนคอกีตาร์ พร้อมเลขลำดับ (1, 2, 3…)
+- **[UI] Premium Layout:** โทนสีส้ม/เทา, Responsive, ไม่ทับปุ่ม
+
+### ระบบโปรเจกต์ & หลายท่อน (Project Workspace)
+
+- **[Feature] หน้า Hub โปรเจกต์:** เริ่มที่รายการเพลง — **1 เพลง = 1 โปรเจกต์** — เพลงใหม่ต้องสร้างโปรเจกต์ใหม่
+- **[Feature] แทป/ท่อนในโปรเจกต์:** เพิ่ม/ลบ/สลับแทป (Intro, Verse, Chorus…) ข้อมูลอยู่ในโปรเจกต์เดียวเท่านั้น
+- **[Feature] แถบสถานะ:** แสดง **โปรเจกต์ปัจจุบัน**, แทปที่กำลังแก้, สถานะ (ร่าง / ยังไม่บันทึก / บันทึกแล้ว)
+- **[Feature] บันทึกในเว็บ:** ปุ่ม **บันทึกโปรเจกต์นี้** + `Ctrl+S` → `localStorage` กลับมาเปิดแก้ได้จาก Hub
+- **[Feature] Export PNG:** ดาวน์โหลดแทปท่อนละรูป (html2canvas)
+- **[Feature] Export .txt:** รายละเอียดทุกท่อนในโปรเจกต์
+- **[Module] `static/v2-project.js`:** จัดการ store, Hub/Editor, บันทึก, PNG
+
+### เทคนิคแทป (Techniques) — คลิกบนคอกีตาร์
+
+| โหมด | วิธีใช้ | ผลบนแทป |
+|------|---------|----------|
+| สไลด์จุดเดียว | ติ๊กแล้วคลิก 1 ครั้ง | `/12` |
+| สไลด์ช่วง | คลิกเฟรตต้นทาง → ปลายทาง (สายเดียวกัน) | `12/13` |
+| Hammer-on | คลิกต่ำ → สูง | `5h8` |
+| Pull-off | คลิกสูง → ต่ำ | `8p5` |
+
+- **[Feature] สไลด์ `/12` ไม่ต้องมีโน้ตก่อนหน้า:** เริ่มแทปด้วย slide ได้
+- **[Feature] Hammer / Pull:** แสดงเฉพนอ `h` / `p` ในแทป (ไม่มี H/P บรรทัดบน)
+- **[Core] API token:** `S3F12`, `/S3F12`, `S3F12/13`, `S3F5h8`, `S3F8p5` ฯลฯ
+
+### ไฟล์ & โครงสร้างสำคัญ
+
+```
+app.py                    # Entry point เดียว
+core/guitar_logic.py      # Engine + parse_tab_token
+core/learning.py          # AI learning (in-memory)
+static/fretboard_builder.html
+static/v2-project.js      # โปรเจกต์ / Hub / บันทึก
+run_app.bat               # เปิดแอป (ปิด = หยุดเซิร์ฟเวอร์)
+stop_app.bat              # หยุดตัวค้าง port 8000
+```
+
+### การทดสอบ
+
+- **`tests/test_guitar_logic.py`** — engine, token, slide, hammer, pull
+- **`tests/test_learning.py`** — ประวัติแก้ไข, weight score
+- **`tests/test_api.py`** — หน้า HTML + REST API
+- รันครั้งเดียว: `python -m unittest discover -s tests -p "test_*.py" -v` หรือ `run_tests.bat`
+
+---
+
+## หมายเหตุเวอร์ชันก่อนหน้า (รวมเข้า V2.0 แล้ว)
+
+รายการจาก V2.0 (26/3/2026) และ V2.1 (26/3/2026) เช่น การรวม `app.py`, PWA, คอกีตาร์ 24 เฟรต, Slide mode รุ่นแรก — **ถูกรวมและขยายใน V2.0 ด้านบนแล้ว** ไม่แยกเป็น V2.1 อีกต่อไป

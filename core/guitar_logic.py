@@ -123,23 +123,114 @@ def _parse_note_str(note_str: str) -> tuple[str, Optional[str]]:
         note_str = note_str[:-1]
     return note_str, direction
 
-def _get_valid_positions(base_note: str, direction: Optional[str], prev_pos: Optional[dict], min_fret: int, max_fret: int, allowed_strings: Optional[list[int]]) -> list[dict]:
-    """ Retrieves strictly valid positions matching the Fret Box, String rules, and Direction (+/-) """
-    
-    # Check for direct coordinate format e.g., S3F10
-    match = re.match(r"^S(\d+)F(\d+)$", base_note.strip())
+
+def parse_tab_token(note_str: str) -> Optional[dict]:
+    """
+    แปลง token แทปโดยตรง — รองรับ slide ไม่ต้องมีโน้ตก่อนหน้า
+    รูปแบบ: S3F12, /S3F12, /12 (ต้องมีสายจากบริบท), S3/12
+    """
+    raw = note_str.strip()
+    if not raw:
+        return None
+
+    is_slide = raw.startswith('/')
+    if is_slide:
+        raw = raw[1:].strip()
+
+    # S3F5h8 / S3F8p5 — hammer-on / pull-off
+    match = re.match(r"^S(\d+)F(\d+)([hHpP])(\d+)$", raw)
     if match:
         string = int(match.group(1))
         fret = int(match.group(2))
+        legato_to = int(match.group(4))
+        legato_type = "hammer" if match.group(3).lower() == "h" else "pull"
         tuning = get_guitar_fretboard()
-        # string 1-6 -> index 5 to 0
-        string_idx = 6 - string 
-        midi_val = tuning[string_idx] + fret
-        return [{
+        midi_val = tuning[6 - string] + fret
+        return {
             "string": string,
             "fret": fret,
-            "midi_value": midi_val
-        }]
+            "legatoToFret": legato_to,
+            "legatoType": legato_type,
+            "midi_value": midi_val,
+            "modifier": legato_type,
+        }
+
+    # S3F12/13 — สไลด์ช่วง 12→13 บนสาย 3
+    match = re.match(r"^S(\d+)F(\d+)/(\d+)$", raw, re.IGNORECASE)
+    if match:
+        string = int(match.group(1))
+        fret = int(match.group(2))
+        slide_to = int(match.group(3))
+        tuning = get_guitar_fretboard()
+        midi_val = tuning[6 - string] + fret
+        return {
+            "string": string,
+            "fret": fret,
+            "slideToFret": slide_to,
+            "midi_value": midi_val,
+            "modifier": "range",
+        }
+
+    # S3/12/13 — สไลด์ช่วง (รูปแบบทางเลือก)
+    match = re.match(r"^S(\d+)/(\d+)/(\d+)$", raw, re.IGNORECASE)
+    if match:
+        string = int(match.group(1))
+        fret = int(match.group(2))
+        slide_to = int(match.group(3))
+        tuning = get_guitar_fretboard()
+        midi_val = tuning[6 - string] + fret
+        return {
+            "string": string,
+            "fret": fret,
+            "slideToFret": slide_to,
+            "midi_value": midi_val,
+            "modifier": "range",
+        }
+
+    # S3/12 — สาย 3 สไลด์ไปเฟรต 12 (จุดเดียว)
+    match = re.match(r"^S(\d+)/(\d+)$", raw, re.IGNORECASE)
+    if match:
+        is_slide = True
+        string = int(match.group(1))
+        fret = int(match.group(2))
+    else:
+        match = re.match(r"^S(\d+)F(\d+)$", raw, re.IGNORECASE)
+        if match:
+            string = int(match.group(1))
+            fret = int(match.group(2))
+        else:
+            match = re.match(r"^(\d+)$", raw)
+            if match and is_slide:
+                return {
+                    "fret": int(match.group(1)),
+                    "midi_value": 0,
+                    "modifier": "/",
+                    "fret_only": True,
+                }
+            return None
+
+    if not (1 <= string <= 6 and 0 <= fret <= 24):
+        return None
+
+    tuning = get_guitar_fretboard()
+    string_idx = 6 - string
+    midi_val = tuning[string_idx] + fret
+    pos = {
+        "string": string,
+        "fret": fret,
+        "midi_value": midi_val,
+    }
+    if is_slide:
+        pos["modifier"] = "/"
+    return pos
+
+
+def _get_valid_positions(base_note: str, direction: Optional[str], prev_pos: Optional[dict], min_fret: int, max_fret: int, allowed_strings: Optional[list[int]]) -> list[dict]:
+    """ Retrieves strictly valid positions matching the Fret Box, String rules, and Direction (+/-) """
+    
+    explicit = parse_tab_token(base_note)
+    if explicit and not explicit.get("fret_only"):
+        return [explicit]
         
     midi_val = note_to_midi(base_note)
     all_pos = find_all_positions(midi_val)
@@ -189,8 +280,10 @@ def generate_tab_path(note_names: list[str], min_fret: int = 0, max_fret: int = 
 
     logger.debug(f"[Engine] Starting Pathfinding | Notes: {len(note_names)} | StartPos: {start_pos}")
     path = []
-    
-    # 1. จัดการโน้ตเปิดจุดเริ่มต้น
+    current_pos = None
+    start_idx = 0
+
+    # 1. จุดเริ่มต้น (anchor / โน้ตหรือ slide ตัวแรก)
     if start_pos and start_pos.get('fret') is not None:
         current_pos = start_pos.copy() if hasattr(start_pos, 'copy') else dict(start_pos)
         if 'midi_value' not in current_pos:
@@ -200,36 +293,76 @@ def generate_tab_path(note_names: list[str], min_fret: int = 0, max_fret: int = 
             current_pos['midi_value'] = open_midi + current_pos['fret']
         if note_names[0].startswith('/'):
             current_pos['modifier'] = '/'
-        logger.debug(f"[Engine] Using forced start position: {current_pos}")
         path.append(current_pos)
+        start_idx = 1
     else:
-        # โน้ตตัวแรกแบบออโต้
-        base_note, direction = _parse_note_str(note_names[0])
-        logger.debug(f"[Engine] First note parsed as: {base_note} | Direction: {direction}")
-        valid_first_pos = _get_valid_positions(base_note, direction, None, min_fret, max_fret, allowed_strings)
-        if not valid_first_pos:
-            logger.warning(f"[Engine] No valid starting position for {base_note}. Returning empty path.")
-            return []
-        current_pos = valid_first_pos[0]
-        logger.debug(f"[Engine] Selected first position: {current_pos}")
-        path.append(current_pos)
+        first_token = note_names[0]
+        explicit_first = parse_tab_token(first_token)
+        if explicit_first and explicit_first.get('fret_only') and allowed_strings:
+            # /12 โดยไม่ระบุสาย — ใช้สายแรกที่อนุญาต (กรณีพิเศษ)
+            fret = explicit_first['fret']
+            string = (allowed_strings or [3])[0]
+            tuning = get_guitar_fretboard()
+            explicit_first = {
+                "string": string,
+                "fret": fret,
+                "midi_value": tuning[6 - string] + fret,
+                "modifier": "/",
+            }
+        if explicit_first and not explicit_first.get('fret_only'):
+            current_pos = explicit_first.copy()
+            path.append(current_pos)
+            start_idx = 1
+            logger.debug(f"[Engine] First token explicit/slide: {current_pos}")
+        else:
+            base_note, direction = _parse_note_str(first_token.lstrip('/'))
+            valid_first_pos = _get_valid_positions(base_note, direction, None, min_fret, max_fret, allowed_strings)
+            if not valid_first_pos:
+                logger.warning(f"[Engine] No valid starting position for {first_token}. Returning empty path.")
+                return []
+            current_pos = valid_first_pos[0].copy()
+            if first_token.strip().startswith('/'):
+                current_pos['modifier'] = '/'
+            path.append(current_pos)
+            start_idx = 1
 
-    # 2. ค้นหาเส้นทางโน้ตตัวถัดๆ ไป (Engine Core Loop)
-    start_idx = 1 if not start_pos else 1 
+    # 2. โน้ตถัดไป
     for i in range(start_idx, len(note_names)):
         note_str = note_names[i]
-        is_slide = False
-        if note_str.startswith('/'):
-            is_slide = True
-            note_str = note_str[1:]
-            
-        base_note, direction = _parse_note_str(note_str)
-        logger.debug(f"[Engine] Solving Note [{i}]: {note_names[i]} (Base: {base_note}, Dir: {direction}, Slide: {is_slide})")
-        
+        is_slide = note_str.strip().startswith('/')
+
+        explicit = parse_tab_token(note_str)
+        if explicit and explicit.get('fret_only'):
+            if current_pos and current_pos.get('string'):
+                fret = explicit['fret']
+                string = current_pos['string']
+                tuning = get_guitar_fretboard()
+                explicit = {
+                    "string": string,
+                    "fret": fret,
+                    "midi_value": tuning[6 - string] + fret,
+                    "modifier": "/",
+                }
+            else:
+                logger.warning(f"[Engine] Cannot resolve fret-only slide {note_str} without prior string.")
+                break
+
+        if explicit and not explicit.get('fret_only'):
+            best_pos = explicit.copy()
+            if is_slide and not best_pos.get('modifier'):
+                best_pos['modifier'] = '/'
+            path.append(best_pos)
+            current_pos = best_pos
+            continue
+
+        note_body = note_str[1:].strip() if is_slide else note_str.strip()
+        base_note, direction = _parse_note_str(note_body)
+        logger.debug(f"[Engine] Solving Note [{i}]: {note_str} (Base: {base_note}, Dir: {direction}, Slide: {is_slide})")
+
         current_allowed_strings = allowed_strings
         if is_slide and current_pos:
             current_allowed_strings = [current_pos['string']]
-            
+
         valid_next_pos = _get_valid_positions(base_note, direction, current_pos, min_fret, max_fret, current_allowed_strings)
         
         if not valid_next_pos and is_slide and current_pos:

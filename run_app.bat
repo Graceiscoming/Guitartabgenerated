@@ -2,22 +2,19 @@
 title Smart Guitar Tab Generator
 cd /d "%~dp0"
 
-echo Starting Backend Server...
-start /B python app.py
+echo.
+echo  ============================================
+echo    Guitar Tab - เซิร์ฟเวอร์จะทำงานเมื่อหน้าต่างนี้เปิดอยู่
+echo    ปิดหน้าต่างนี้ หรือ กด Ctrl+C  =  หยุดเซิร์ฟเวอร์
+echo  ============================================
+echo.
 
-echo Waiting for Server...
-timeout /t 3 /nobreak >nul
+REM เปิดเบราว์เซอร์หลังรอ ~2 วินาที (ไม่บล็อกเซิร์ฟเวอร์)
+start "" cmd /c "ping -n 3 127.0.0.1 >nul && start http://localhost:8000/v2"
 
-echo Launching Smart Guitar Tab App...
-REM Try Edge first (Native App mode built in to Windows)
-start msedge --app="http://localhost:8000" 
-if %ERRORLEVEL% neq 0 (
-    REM Fallback to Chrome
-    start chrome --app="http://localhost:8000"
-    if %ERRORLEVEL% neq 0 (
-        REM Ultimate Fallback
-        start http://localhost:8000
-    )
-)
+REM รันเซิร์ฟเวอร์หน้าต่างนี้ (ไม่ใช้ start /B — ปิดหน้าต่างแล้วเซิร์ฟเวอร์หยุด)
+python -u app.py
 
-echo App is running. Close this window to stop the server later.
+echo.
+echo เซิร์ฟเวอร์ปิดแล้ว
+pause
